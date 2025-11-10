@@ -1,0 +1,105 @@
+# Zero-to-Running Developer Environment
+# Configuration Template
+# Copy this file to config.yaml and customize as needed
+
+# ────────────────────────────────────────────────────────────────────────────────
+# Project Configuration
+# ────────────────────────────────────────────────────────────────────────────────
+project:
+  # Project name (required)
+  # Used for naming resources, clusters, and containers
+  name: "my-app"
+  
+  # Git repository URL (optional)
+  # If empty or omitted, the tool will scaffold a new "hello world" project
+  # Example: "https://github.com/username/repo.git"
+  git_repo: ""
+
+# ────────────────────────────────────────────────────────────────────────────────
+# Services Configuration (Optional - Convention over Configuration)
+# ────────────────────────────────────────────────────────────────────────────────
+services:
+  # Frontend service (React + Vite + TypeScript + Tailwind)
+  frontend:
+    # Path to frontend directory (default: ./frontend)
+    path: "./frontend"
+    # Port for frontend service (default: 3000, fixed)
+    port: 3000
+  
+  # Backend service (Node.js + Express + TypeScript + Prisma)
+  backend:
+    # Path to backend directory (default: ./backend)
+    path: "./backend"
+    # Port for backend service (default: 8080, fixed)
+    port: 8080
+  
+  # Database service (PostgreSQL)
+  database:
+    # Path to Prisma schema file (default: ./backend/prisma/schema.prisma)
+    schema_path: "./backend/prisma/schema.prisma"
+  
+  # Cache service (Redis)
+  cache:
+    # Enable Redis cache (default: true)
+    # Note: The tool always supports Redis, but you can disable it for your project
+    enabled: true
+
+# ────────────────────────────────────────────────────────────────────────────────
+# Google Kubernetes Engine (GKE) Configuration
+# ────────────────────────────────────────────────────────────────────────────────
+gke:
+  # GCP project ID (REQUIRED for deployment)
+  # Find your project ID: https://console.cloud.google.com/
+  project_id: "your-gcp-project-id"
+  
+  # GCP region (default: us-central1)
+  # Common regions: us-central1, us-east1, europe-west1, asia-southeast1
+  region: "us-central1"
+  
+  # GKE cluster name (default: auto-generated from project name)
+  # If empty, will be generated as: <project_name>-cluster
+  # Note: The tool automatically detects and reuses existing clusters
+  cluster_name: ""
+  
+  # Node configuration
+  node_config:
+    # Machine type for GKE nodes (default: e2-medium)
+    # Options: e2-small, e2-medium, e2-standard-2, e2-standard-4
+    # See: https://cloud.google.com/compute/docs/machine-types
+    machine_type: "e2-medium"
+    
+    # Number of nodes in the cluster (default: 2)
+    # Minimum: 1, Recommended: 2-3 for high availability
+    node_count: 2
+    
+    # Disk size per node in GB (default: 20)
+    disk_size_gb: 20
+
+# ────────────────────────────────────────────────────────────────────────────────
+# Seed Data Configuration
+# ────────────────────────────────────────────────────────────────────────────────
+seed:
+  # Number of users to generate (default: 30)
+  users: 30
+  
+  # Number of tasks per user (default: "5-10")
+  # Can be a fixed number (e.g., 10) or a range (e.g., "5-10")
+  # Range format generates a random number within the range for each user
+  tasks_per_user: "5-10"
+
+# ────────────────────────────────────────────────────────────────────────────────
+# Usage Notes
+# ────────────────────────────────────────────────────────────────────────────────
+# 1. Copy this file to config.yaml: cp config.yaml.example config.yaml
+# 2. Edit config.yaml with your values
+# 3. Run: make dev (start local environment)
+# 4. Run: make seed (generate test data)
+# 5. Run: make deploy (deploy to GKE)
+#
+# Convention over Configuration:
+# - Most settings are optional and use sensible defaults
+# - Override only what you need to customize
+# - Empty git_repo triggers project scaffolding
+#
+# For more information, see README.md
+
