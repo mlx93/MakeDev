@@ -42,3 +42,7 @@ tmp/
 temp/
 *.tmp
 
+# Test directories
+my-test-app/
+test-app/
+
