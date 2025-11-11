@@ -1,0 +1,9 @@
+# Kubernetes Namespace for Application
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: zero-to-running-app
+  labels:
+    app: zero-to-running
+    managed-by: terraform
+

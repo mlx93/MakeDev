@@ -1,0 +1,20 @@
+# Backend Service (ClusterIP - Internal Only)
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: zero-to-running-app
+  labels:
+    app: backend
+    tier: backend
+spec:
+  type: ClusterIP
+  selector:
+    app: backend
+    tier: backend
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+

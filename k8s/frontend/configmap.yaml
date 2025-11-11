@@ -1,0 +1,12 @@
+# Frontend ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+  namespace: zero-to-running-app
+  labels:
+    app: frontend
+    tier: frontend
+data:
+  VITE_API_URL: "http://backend-service:8080/api/v1"
+

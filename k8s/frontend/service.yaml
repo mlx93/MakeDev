@@ -1,0 +1,21 @@
+# Frontend Service (LoadBalancer - Public Access)
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: zero-to-running-app
+  labels:
+    app: frontend
+    tier: frontend
+spec:
+  type: LoadBalancer
+  selector:
+    app: frontend
+    tier: frontend
+  ports:
+  - name: http
+    port: 80
+    targetPort: 3000
+    protocol: TCP
+  sessionAffinity: ClientIP
+

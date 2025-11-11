@@ -1,0 +1,21 @@
+# PostgreSQL Service (ClusterIP - Internal Only)
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: zero-to-running-app
+  labels:
+    app: postgres
+    tier: database
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres
+    tier: database
+  ports:
+  - name: postgres
+    port: 5432
+    targetPort: 5432
+    protocol: TCP
+  clusterIP: None  # Headless service for StatefulSet
+

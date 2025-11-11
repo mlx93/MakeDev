@@ -40,3 +40,13 @@ prisma/migrations/
 # Docker
 .docker/
 
+# Deployment infrastructure (copied from tool during make deploy)
+k8s/
+terraform/
+docker/Dockerfile.backend
+docker/Dockerfile.frontend
+
+# Keep docker-compose.yml for local dev reference
+!docker/docker-compose.yml
+
+

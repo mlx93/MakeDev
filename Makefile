@@ -97,29 +97,37 @@ seed: ## Generate fake data from Prisma schema
 # GKE Deployment
 # ────────────────────────────────────────────────────────────────────────────────
 deploy: ## Deploy to Google Kubernetes Engine
-	@echo "☁️  Deploying to GKE..."
-	@# TODO: Implement by C&C Part 2 agent
-	@# - Check prerequisites (gcloud, kubectl, terraform)
-	@# - Read config.yaml (gke.project_id, gke.region, gke.cluster_name)
-	@# - Check for existing cluster, reuse if found
-	@# - If not exists, terraform apply (provision cluster)
-	@# - Build production images
-	@# - Push images to Artifact Registry
-	@# - Convert .env.production (or .env) to K8s secrets
-	@# - kubectl apply -f k8s/
-	@# - Wait for pods ready
-	@# - Get LoadBalancer IP
-	@# - Display URL and cost estimate
+	@if [ -n "$(SUBDIR)" ]; then \
+		cd "$(SUBDIR)" && \
+		if [ ! -f "config.yaml" ]; then \
+			echo "❌ Error: config.yaml not found in $(SUBDIR)"; \
+			exit 1; \
+		fi && \
+		bash ../scripts/deploy-gke.sh; \
+	else \
+		if [ ! -f "config.yaml" ]; then \
+			echo "❌ Error: config.yaml not found. Please create it from config.yaml.example"; \
+			exit 1; \
+		fi && \
+		bash scripts/deploy-gke.sh; \
+	fi
 
 # ────────────────────────────────────────────────────────────────────────────────
 # Cleanup
 # ────────────────────────────────────────────────────────────────────────────────
 destroy: ## Teardown all resources (local + GKE)
-	@echo "🧹 Tearing down environment..."
-	@# TODO: Implement by C&C Part 2 agent
-	@# - Prompt for confirmation
-	@# - docker-compose down -v (local)
-	@# - kubectl delete -f k8s/ (GKE resources)
-	@# - Optionally: terraform destroy (cluster)
-	@# - Display cost savings message
+	@if [ -n "$(SUBDIR)" ]; then \
+		cd "$(SUBDIR)" && \
+		if [ ! -f "config.yaml" ]; then \
+			echo "❌ Error: config.yaml not found in $(SUBDIR)"; \
+			exit 1; \
+		fi && \
+		bash ../scripts/cleanup.sh; \
+	else \
+		if [ ! -f "config.yaml" ]; then \
+			echo "❌ Error: config.yaml not found. Please create it from config.yaml.example"; \
+			exit 1; \
+		fi && \
+		bash scripts/cleanup.sh; \
+	fi
 
