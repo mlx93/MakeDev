@@ -5,7 +5,10 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+# PROJECT_ROOT is the current working directory (where Makefile cd'd to)
+PROJECT_ROOT="$(pwd)"
+# TOOL_DIR is where the ZeroToRunDevEnv tool is located
+TOOL_DIR="$(dirname "$SCRIPT_DIR")"
 
 echo "☁️  Zero-to-Running Developer Environment - GKE Deployment"
 echo "=========================================================="
@@ -50,18 +53,34 @@ echo ""
 # ────────────────────────────────────────────────────────────────────────────────
 # Step 2: Read Configuration
 # ────────────────────────────────────────────────────────────────────────────────
-echo "📋 Reading configuration..."
+echo "📋 Checking configuration..."
 
 if [ ! -f "$PROJECT_ROOT/config.yaml" ]; then
-    echo "❌ config.yaml not found"
-    exit 1
+    echo "⚠️  config.yaml not found in $PROJECT_ROOT"
+    echo ""
+    echo "Let's create one! (takes ~1 minute)"
+    echo ""
+    
+    # Run interactive config generator
+    bash "$TOOL_DIR/scripts/setup-config.sh"
+    
+    # Verify it was created
+    if [ ! -f "$PROJECT_ROOT/config.yaml" ]; then
+        echo "❌ config.yaml was not created"
+        exit 1
+    fi
 fi
 
-# Extract configuration values
-PROJECT_NAME=$(grep "name:" "$PROJECT_ROOT/config.yaml" | head -1 | sed 's/.*name:[[:space:]]*"\?\([^"]*\)"\?.*/\1/' | tr -d ' ')
-GCP_PROJECT_ID=$(grep "project_id:" "$PROJECT_ROOT/config.yaml" | sed 's/.*project_id:[[:space:]]*"\?\([^"]*\)"\?.*/\1/' | tr -d ' ')
-GCP_REGION=$(grep "region:" "$PROJECT_ROOT/config.yaml" | sed 's/.*region:[[:space:]]*"\?\([^"]*\)"\?.*/\1/' | tr -d ' ')
-CLUSTER_NAME=$(grep "cluster_name:" "$PROJECT_ROOT/config.yaml" | sed 's/.*cluster_name:[[:space:]]*"\?\([^"]*\)"\?.*/\1/' | tr -d ' ')
+echo "✅ Configuration file found"
+echo ""
+
+echo "📋 Reading configuration..."
+
+# Extract configuration values using awk for reliable YAML parsing
+PROJECT_NAME=$(grep "name:" "$PROJECT_ROOT/config.yaml" | head -1 | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
+GCP_PROJECT_ID=$(grep "project_id:" "$PROJECT_ROOT/config.yaml" | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
+GCP_REGION=$(grep "region:" "$PROJECT_ROOT/config.yaml" | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
+CLUSTER_NAME=$(grep "cluster_name:" "$PROJECT_ROOT/config.yaml" | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
 
 # Validate required values
 if [ -z "$PROJECT_NAME" ]; then
@@ -97,28 +116,44 @@ if ! gcloud auth list 2>&1 | grep -q ACTIVE; then
 fi
 
 # Set active project
-gcloud config set project "$GCP_PROJECT_ID" &> /dev/null
+gcloud config set project "$GCP_PROJECT_ID" 2>&1 | grep -v "INFORMATION:" || true
 
-echo "   ✅ Authenticated as: $(gcloud config get-value account)"
+echo "   ✅ Authenticated as: $(gcloud config get-value account 2>/dev/null)"
+echo "   ✅ Active project: $(gcloud config get-value project 2>/dev/null)"
 echo ""
 
 # ────────────────────────────────────────────────────────────────────────────────
 # Step 4: Sync Deployment Infrastructure from Tool
 # ────────────────────────────────────────────────────────────────────────────────
 echo "📦 Syncing deployment infrastructure from tool..."
-
-TOOL_DIR="$SCRIPT_DIR/.."
+echo "   Tool directory: $TOOL_DIR"
+echo "   Project directory: $PROJECT_ROOT"
+echo ""
 
 # Sync docker directory (production-ready Dockerfiles)
 echo "   Syncing docker/ directory..."
 mkdir -p "$PROJECT_ROOT/docker"
-cp -f "$TOOL_DIR/docker/Dockerfile.backend" "$PROJECT_ROOT/docker/" 2>/dev/null && echo "   ✅ Dockerfile.backend synced" || echo "   ⚠️  Dockerfile.backend not found"
-cp -f "$TOOL_DIR/docker/Dockerfile.frontend" "$PROJECT_ROOT/docker/" 2>/dev/null && echo "   ✅ Dockerfile.frontend synced" || echo "   ⚠️  Dockerfile.frontend not found"
+if [ -f "$TOOL_DIR/docker/Dockerfile.backend" ]; then
+    cp -f "$TOOL_DIR/docker/Dockerfile.backend" "$PROJECT_ROOT/docker/"
+    echo "   ✅ Dockerfile.backend synced"
+else
+    echo "   ⚠️  Dockerfile.backend not found"
+fi
+
+if [ -f "$TOOL_DIR/docker/Dockerfile.frontend" ]; then
+    cp -f "$TOOL_DIR/docker/Dockerfile.frontend" "$PROJECT_ROOT/docker/"
+    echo "   ✅ Dockerfile.frontend synced"
+else
+    echo "   ⚠️  Dockerfile.frontend not found"
+fi
+
 cp -f "$TOOL_DIR/docker/docker-compose.yml" "$PROJECT_ROOT/docker/" 2>/dev/null || true
 
 # Sync k8s directory (Kubernetes manifests)
 echo "   Syncing k8s/ directory..."
 if [ -d "$TOOL_DIR/k8s" ]; then
+    # Remove existing k8s directory in project to avoid conflicts
+    rm -rf "$PROJECT_ROOT/k8s"
     cp -rf "$TOOL_DIR/k8s" "$PROJECT_ROOT/"
     echo "   ✅ k8s/ directory synced"
 else
@@ -129,6 +164,8 @@ fi
 # Sync terraform directory (GKE provisioning)
 echo "   Syncing terraform/ directory..."
 if [ -d "$TOOL_DIR/terraform" ]; then
+    # Remove existing terraform directory in project to avoid conflicts
+    rm -rf "$PROJECT_ROOT/terraform"
     cp -rf "$TOOL_DIR/terraform" "$PROJECT_ROOT/"
     echo "   ✅ terraform/ directory synced"
 else
@@ -136,6 +173,7 @@ else
     exit 1
 fi
 
+echo ""
 echo "   ✅ All deployment infrastructure synced"
 echo ""
 

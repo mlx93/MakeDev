@@ -1,4 +1,4 @@
-.PHONY: help dev seed deploy destroy
+.PHONY: help config dev seed deploy destroy
 
 # Default target
 .DEFAULT_GOAL := help
@@ -15,13 +15,27 @@ help: ## Show available commands
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 	@echo "Quick start:"
-	@echo "  Option 1 - New project in subdirectory:"
-	@echo "    make dev SUBDIR=my-app"
+	@echo "  Option 1 - New project with interactive setup:"
+	@echo "    make config SUBDIR=my-app    # Generate config.yaml"
+	@echo "    make dev SUBDIR=my-app       # Start development"
 	@echo ""
-	@echo "  Option 2 - Existing project:"
+	@echo "  Option 2 - Auto-setup (config during deploy):"
+	@echo "    make deploy SUBDIR=my-app    # Will prompt for config if missing"
+	@echo ""
+	@echo "  Option 3 - Manual config:"
 	@echo "    1. cp config.yaml.example config.yaml"
 	@echo "    2. Edit config.yaml with your project details"
 	@echo "    3. make dev"
+
+# ────────────────────────────────────────────────────────────────────────────────
+# Configuration
+# ────────────────────────────────────────────────────────────────────────────────
+config: ## Generate config.yaml interactively
+	@if [ -n "$(SUBDIR)" ]; then \
+		cd "$(SUBDIR)" && bash ../scripts/setup-config.sh; \
+	else \
+		bash scripts/setup-config.sh; \
+	fi
 
 # ────────────────────────────────────────────────────────────────────────────────
 # Local Development
