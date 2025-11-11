@@ -38,11 +38,60 @@ dev: ## Start local development environment (Docker Compose)
 # ────────────────────────────────────────────────────────────────────────────────
 seed: ## Generate fake data from Prisma schema
 	@echo "🌱 Generating seed data..."
-	@# TODO: Implement by A&D agent
-	@# - Read config.yaml (seed.users, seed.tasks_per_user)
-	@# - Parse Prisma schema from services.database.schema_path
-	@# - Run seed-database.ts
-	@# - Display summary (users created, tasks created)
+	@if [ -n "$(SUBDIR)" ]; then \
+		cd "$(SUBDIR)" && \
+		if [ ! -f "config.yaml" ]; then \
+			echo "❌ Error: config.yaml not found in $(SUBDIR)"; \
+			exit 1; \
+		fi && \
+		if [ ! -d "backend" ]; then \
+			echo "❌ Error: backend directory not found in $(SUBDIR)"; \
+			exit 1; \
+		fi && \
+		if [ ! -f "backend/prisma/schema.prisma" ]; then \
+			echo "❌ Error: Prisma schema not found at backend/prisma/schema.prisma"; \
+			exit 1; \
+		fi && \
+		cd backend && \
+		if [ ! -d "node_modules" ]; then \
+			echo "⚠️  Backend dependencies not found, installing..." && \
+			npm install; \
+		fi && \
+		if [ ! -d "node_modules/@prisma/client" ]; then \
+			echo "⚠️  Prisma client not found, generating..." && \
+			npx prisma generate; \
+		fi && \
+		cd .. && \
+		export DATABASE_URL="$${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/appdb}" && \
+		export NODE_PATH="$$(pwd)/backend/node_modules:$$NODE_PATH" && \
+		npx tsx ../scripts/seed-database.ts "$(PWD)/$(SUBDIR)"; \
+	else \
+		if [ ! -f "config.yaml" ]; then \
+			echo "❌ Error: config.yaml not found. Please create it from config.yaml.example"; \
+			exit 1; \
+		fi && \
+		if [ ! -d "backend" ]; then \
+			echo "❌ Error: backend directory not found"; \
+			exit 1; \
+		fi && \
+		if [ ! -f "backend/prisma/schema.prisma" ]; then \
+			echo "❌ Error: Prisma schema not found at backend/prisma/schema.prisma"; \
+			exit 1; \
+		fi && \
+		cd backend && \
+		if [ ! -d "node_modules" ]; then \
+			echo "⚠️  Backend dependencies not found, installing..." && \
+			npm install; \
+		fi && \
+		if [ ! -d "node_modules/@prisma/client" ]; then \
+			echo "⚠️  Prisma client not found, generating..." && \
+			npx prisma generate; \
+		fi && \
+		cd .. && \
+		export DATABASE_URL="$${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/appdb}" && \
+		export NODE_PATH="$$(pwd)/backend/node_modules:$$NODE_PATH" && \
+		npx tsx scripts/seed-database.ts "$(PWD)"; \
+	fi
 
 # ────────────────────────────────────────────────────────────────────────────────
 # GKE Deployment

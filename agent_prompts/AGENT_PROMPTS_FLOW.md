@@ -58,18 +58,20 @@
 │              A&D AGENT                                           │
 │         (App & Data)                                             │
 │                                                                   │
-│  Focus: Tool's backend/frontend, seed generator                 │
+│  Focus: Tool infrastructure (seed generator, enhanced health)    │
 │                                                                   │
 │  Files Created:                                                  │
-│  • Backend API (Express + Prisma)                                │
-│  • Frontend app (React + Vite)                                   │
-│  • scripts/seed-database.ts                                      │
-│  • Health endpoints (/health, /health/ready)                      │
-│  • Prisma schema + migrations                                    │
+│  • scripts/seed-database.ts (schema-agnostic)                   │
+│  • Enhanced health endpoints (database/Redis checks)             │
+│  • Updated Makefile (seed target)                                 │
+│  • Updated backend package.json (dependencies)                  │
+│                                                                   │
+│  ✅ COMPLETE                                                     │
 └────────┬──────────────────────────────────────────────────────────┘
          │
-         │ Handoff: Working application code,
-         │          seed generator, health checks
+         │ Handoff: Seed generator working,
+         │          enhanced health checks,
+         │          make seed command ready
          │
          ▼
 ┌─────────────────────────────────────────────────────────────────┐
@@ -142,8 +144,8 @@
 |-------|-------|-------|-------|------------------|--------|
 | **DXS** | 1 | Planning | Structure & Design | File trees, Makefile stubs, config.yaml, scaffolding design | ✅ Complete |
 | **C&C Part 1** | 2 | Phase 1 | Local Dev | Docker Compose, Dockerfiles, `make dev` working | ✅ Complete |
-| **A&D** | 3 | Phase 3 | Tool App | Backend API, Frontend app, seed generator | 🔄 Prompt Ready |
-| **ETA** | 4 | Phase 3 | Example App | example-task-app repository | 📋 Pending |
+| **A&D** | 3 | Phase 3 | Tool Infrastructure | Seed generator, enhanced health endpoints | ✅ Complete |
+| **ETA** | 4 | Phase 3 | Example App | example-task-app repository (full task CRUD app) | 📋 Prompt Ready |
 | **C&C Part 2** | 5 | Phase 2 | GKE Deployment | Terraform, K8s manifests, `make deploy` working | 📋 Pending |
 | **D&D** | 6 | Phase 4 | Documentation | READMEs, troubleshooting, demo runbook | 📋 Pending |
 
@@ -166,8 +168,8 @@
 |-------|-------------|----------|
 | DXS | `DXS_AGENT_PROMPT.md` | `agent_prompts/DXS_AGENT_PROMPT.md` |
 | C&C Part 1 | `CC_PART1_AGENT_PROMPT.md` | `agent_prompts/CC_PART1_AGENT_PROMPT.md` |
-| A&D | `A&D_AGENT_PROMPT.md` | `agent_prompts/A&D_AGENT_PROMPT.md` (to be created) |
-| ETA | `ETA_AGENT_PROMPT.md` | `agent_prompts/ETA_AGENT_PROMPT.md` (to be created) |
+| A&D | `A&D_AGENT_PROMPT.md` | `agent_prompts/A&D_AGENT_PROMPT.md` |
+| ETA | `ETA_AGENT_PROMPT.md` | `agent_prompts/ETA_AGENT_PROMPT.md` |
 | C&C Part 2 | `CC_PART2_AGENT_PROMPT.md` | `agent_prompts/CC_PART2_AGENT_PROMPT.md` (to be created) |
 | D&D | `D&D_AGENT_PROMPT.md` | `agent_prompts/D&D_AGENT_PROMPT.md` (to be created) |
 
@@ -193,11 +195,11 @@ Each agent must pass quality gates before proceeding:
 - Project scaffolding working
 - Subdirectory support implemented
 
-### Gate 3: A&D Complete 📋
-- Tool's backend API working locally
-- Tool's frontend working locally
-- Seed generator working
-- Health checks implemented
+### Gate 3: A&D Complete ✅
+- Seed generator working (schema-agnostic, reads Prisma dynamically)
+- Enhanced health endpoints (database/Redis connectivity checks)
+- `make seed` command working end-to-end
+- All dependencies added to backend template
 
 ### Gate 4: ETA Complete 📋
 - Example-task-app repo complete
@@ -232,10 +234,10 @@ Each agent must pass quality gates before proceeding:
 - Docker Compose working
 
 ### A&D → ETA
-- Tool's tech stack confirmed
-- Seed generator working
-- Health checks implemented
-- Backend/frontend patterns established
+- Seed generator working (ready for User/Task schema)
+- Enhanced health endpoints implemented
+- `make seed` command available
+- Tool infrastructure complete (ETA builds example-task-app)
 
 ### ETA → C&C Part 2
 - Example app complete
@@ -266,8 +268,8 @@ Each agent must pass quality gates before proceeding:
 
 - **Week 1**: DXS (Planning) ✅ Complete
 - **Week 1-2**: C&C Part 1 (Local Dev) ✅ Complete
-- **Week 2-3**: A&D (Tool App) 🔄 Ready to Start
-- **Week 3-4**: ETA (Example App) 📋 Pending
+- **Week 2-3**: A&D (Tool Infrastructure) ✅ Complete
+- **Week 3-4**: ETA (Example App) 📋 Ready to Start
 - **Week 4-5**: C&C Part 2 (GKE Deployment) 📋 Pending
 - **Week 5-6**: D&D (Documentation) 📋 Pending
 

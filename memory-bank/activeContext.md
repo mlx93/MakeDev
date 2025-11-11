@@ -1,19 +1,38 @@
 # Active Context: Zero-to-Running Developer Environment
 
 **Last Updated:** November 10, 2025  
-**Current Phase:** Phase 3 - Advanced Features (A&D Agent)
+**Current Phase:** Phase 3 - Advanced Features (ETA Agent)
 
 ---
 
 ## Current Work Focus
 
-**Next Agent:** A&D (App & Data) Agent  
+**Next Agent:** ETA (Example Task App) Agent  
 **Status:** Ready to spawn  
-**Prompt:** `agent_prompts/A&D_AGENT_PROMPT.md` (to be created)
+**Prompt:** `agent_prompts/ETA_AGENT_PROMPT.md` (to be created)
 
 ---
 
 ## Recent Changes
+
+### A&D Agent Complete (November 10, 2025)
+
+**Delivered:**
+- ✅ Schema-agnostic seed generator (`scripts/seed-database.ts`)
+- ✅ Enhanced health endpoints (database/Redis connectivity checks)
+- ✅ Makefile seed target implemented (`make seed`)
+- ✅ Backend dependencies added (ioredis, @faker-js/faker, yaml)
+
+**Key Features:**
+- Seed generator reads Prisma schema dynamically (works with any schema)
+- Handles User/Task models with config-driven counts
+- Generates realistic data using Faker.js
+- Idempotent (safe to run multiple times)
+- Health endpoints check PostgreSQL and Redis connectivity
+
+**Report:** `agent_reports/A&D_Agent_Report_Done.md`
+
+---
 
 ### C&C Part 1 Agent Complete (November 10, 2025)
 
@@ -46,25 +65,27 @@
 
 ## Next Steps
 
-### Immediate: A&D Agent Implementation
+### Immediate: ETA Agent Implementation
 
-**What A&D Needs to Build:**
-1. **Prisma Schema** - User and Task models with relationships
-2. **Backend API** - Express routes (auth, tasks, health)
-3. **Frontend App** - React components (login, dashboard, task management)
-4. **Seed Generator** - `scripts/seed-database.ts` (reads Prisma schema, uses Faker.js)
-5. **Enhanced Health Endpoints** - Database/Redis connectivity checks
+**What ETA Needs to Build:**
+1. **Complete example-task-app Repository** - Separate repo demonstrating tool capabilities
+2. **Prisma Schema** - User and Task models with relationships
+3. **Backend API** - Express routes (auth, tasks CRUD)
+4. **Frontend App** - React components (login, dashboard, task management UI)
+5. **Full Task Management** - Complete CRUD functionality
 
 **Dependencies Ready:**
-- ✅ Docker Compose infrastructure working
+- ✅ Docker Compose infrastructure working (`make dev`)
+- ✅ Seed generator available (`make seed` works with any schema)
+- ✅ Enhanced health endpoints implemented
 - ✅ Hot reload configured
-- ✅ Health check endpoints exist (stubs)
 - ✅ Migrations auto-run on startup
 - ✅ Project scaffolding system ready
 
 **Key Files to Reference:**
+- `agent_reports/A&D_Agent_Report_Done.md` - A&D handoff details (seed generator, health endpoints)
 - `agent_reports/cc_part1_agent_done_report.md` - C&C Part 1 handoff details
-- `DONE.md` (from DXS) - File trees, ports, health check contracts
+- `agent_reports/DXS_Agent_Done_Report.md` - DXS planning artifacts
 - `PRD_1_Product_v2.md` - User stories and requirements
 - `PRD_2_Tech_Spec_v2.md` - Technical specifications
 
@@ -79,10 +100,10 @@
 - **Seed Data**: Generated via seed-database.ts (not hardcoded)
 
 ### Implementation Notes
-- A&D builds the **tool's own backend/frontend** (not example-task-app)
-- Example-task-app will be built separately by ETA agent
-- Seed generator must read Prisma schema dynamically (introspection)
-- Health endpoints need database/Redis connectivity checks
+- A&D built **tool infrastructure** (seed generator, enhanced health endpoints)
+- ETA builds **example-task-app** (complete task CRUD app in separate repo)
+- Seed generator works with any Prisma schema (schema-agnostic)
+- Health endpoints check database/Redis connectivity
 
 ### Constraints
 - **NO MD files during implementation** - Only code/config files
@@ -104,29 +125,33 @@
 
 ## Handoff Information
 
-### C&C Part 1 → A&D Handoff
+### A&D → ETA Handoff
 
 **What Works:**
 - `make dev` starts all services successfully
-- Frontend accessible at http://localhost:3000
-- Backend accessible at http://localhost:8080
-- Health check endpoints exist (stub implementations)
-- Hot reload working for both frontend and backend
-- Migrations auto-run on backend startup
+- `make seed` generates realistic test data (schema-agnostic)
+- Enhanced health endpoints check database/Redis connectivity
+- Seed generator reads Prisma schema dynamically
+- All dependencies available (ioredis, @faker-js/faker, yaml)
 
-**What A&D Needs to Implement:**
-- Actual backend API routes (auth, tasks)
-- Actual frontend React components
-- Seed generator script
-- Enhanced health endpoints with dependency checks
+**What ETA Needs to Implement:**
+- Complete `example-task-app/` repository (separate repo)
+- Prisma schema (User + Task models)
+- Backend API (auth endpoints, task CRUD endpoints)
+- Frontend app (login, dashboard, task management UI)
+- Full task management functionality
 
 **File Locations:**
-- Backend code: `backend/src/` (or scaffolded project's backend/)
-- Frontend code: `frontend/src/` (or scaffolded project's frontend/)
-- Seed script: `scripts/seed-database.ts`
-- Prisma schema: `backend/prisma/schema.prisma` (or scaffolded project's)
+- Example app repo: `example-task-app/` (separate directory)
+- Backend code: `example-task-app/backend/src/`
+- Frontend code: `example-task-app/frontend/src/`
+- Prisma schema: `example-task-app/backend/prisma/schema.prisma`
+
+**Seed Generator Compatibility:**
+- ETA's User/Task schema will work with existing seed generator
+- `make seed` will generate 30 users with 5-10 tasks each (configurable via config.yaml)
 
 ---
 
-**Status:** Ready for A&D agent spawn. All infrastructure in place.
+**Status:** Ready for ETA agent spawn. All tool infrastructure complete.
 
