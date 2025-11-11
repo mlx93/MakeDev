@@ -1,11 +1,12 @@
 #!/bin/bash
 # Convert .env to Kubernetes Secrets and ConfigMaps
 # Automatically detects sensitive keys and generates K8s manifests
+# Compatible with bash 3.2+ (no associative arrays)
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+PROJECT_ROOT="$(pwd)"
 
 echo "🔐 Converting environment variables to Kubernetes Secrets/ConfigMaps"
 echo ""
@@ -47,35 +48,15 @@ mkdir -p "$SECRETS_DIR"
 # Sensitive key patterns (case-insensitive)
 SENSITIVE_PATTERNS="password|secret|key|token|auth|credential|api_key|private"
 
-# Parse .env file
-declare -A SECRETS
-declare -A CONFIGS
+# Initialize secret and config files
+BACKEND_SECRET_FILE="$SECRETS_DIR/backend-secret.yaml"
+POSTGRES_SECRET_FILE="$SECRETS_DIR/postgres-secret.yaml"
+DB_USER="postgres"
+DB_PASSWORD="postgres"
+DB_NAME="appdb"
 
-while IFS='=' read -r key value || [ -n "$key" ]; do
-    # Skip comments and empty lines
-    [[ "$key" =~ ^#.*$ ]] && continue
-    [[ -z "$key" ]] && continue
-    
-    # Remove leading/trailing whitespace
-    key=$(echo "$key" | xargs)
-    value=$(echo "$value" | xargs)
-    
-    # Remove quotes from value
-    value=$(echo "$value" | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//")
-    
-    # Check if key is sensitive
-    if echo "$key" | grep -iE "$SENSITIVE_PATTERNS" > /dev/null; then
-        SECRETS["$key"]="$value"
-    else
-        CONFIGS["$key"]="$value"
-    fi
-done < "$ENV_FILE"
-
-# Generate backend-secret.yaml
-if [ ${#SECRETS[@]} -gt 0 ]; then
-    echo "🔒 Generating backend-secret.yaml..."
-    
-    cat > "$SECRETS_DIR/backend-secret.yaml" <<EOF
+# Start backend secret file
+cat > "$BACKEND_SECRET_FILE" << 'EOF'
 # Backend Secret (auto-generated from .env)
 # DO NOT COMMIT THIS FILE TO GIT
 apiVersion: v1
@@ -89,27 +70,53 @@ metadata:
 type: Opaque
 data:
 EOF
+
+# Parse .env file and build secrets/configs
+SECRET_COUNT=0
+while IFS='=' read -r key value || [ -n "$key" ]; do
+    # Skip comments and empty lines
+    [[ "$key" =~ ^#.*$ ]] && continue
+    [[ -z "$key" ]] && continue
     
-    for key in "${!SECRETS[@]}"; do
-        value="${SECRETS[$key]}"
-        # Base64 encode the value
+    # Remove leading/trailing whitespace
+    key=$(echo "$key" | xargs)
+    value=$(echo "$value" | xargs)
+    
+    # Remove quotes from value
+    value=$(echo "$value" | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//")
+    
+    # Extract database credentials for postgres secret
+    # Support both DATABASE_* and POSTGRES_* prefixes
+    if [ "$key" = "DATABASE_USER" ] || [ "$key" = "POSTGRES_USER" ]; then
+        DB_USER="$value"
+    elif [ "$key" = "DATABASE_PASSWORD" ] || [ "$key" = "POSTGRES_PASSWORD" ]; then
+        DB_PASSWORD="$value"
+    elif [ "$key" = "DATABASE_NAME" ] || [ "$key" = "POSTGRES_DB" ]; then
+        DB_NAME="$value"
+    fi
+    
+    # Check if key is sensitive or required for backend (like DATABASE_URL, REDIS_URL)
+    REQUIRED_BACKEND_VARS="DATABASE_URL|REDIS_URL"
+    if echo "$key" | grep -iE "$SENSITIVE_PATTERNS" > /dev/null || echo "$key" | grep -iE "$REQUIRED_BACKEND_VARS" > /dev/null; then
+        # Add to backend secret
         encoded=$(echo -n "$value" | base64)
-        echo "  $key: $encoded" >> "$SECRETS_DIR/backend-secret.yaml"
+        echo "  $key: $encoded" >> "$BACKEND_SECRET_FILE"
         echo "   ✅ Added secret: $key"
-    done
-    
+        SECRET_COUNT=$((SECRET_COUNT + 1))
+    fi
+done < "$ENV_FILE"
+
+# Remove backend secret file if no secrets were added
+if [ $SECRET_COUNT -eq 0 ]; then
+    rm -f "$BACKEND_SECRET_FILE"
+else
     echo ""
 fi
 
 # Generate postgres-secret.yaml
 echo "🔒 Generating postgres-secret.yaml..."
 
-# Extract database credentials
-DB_USER="${SECRETS[DATABASE_USER]:-postgres}"
-DB_PASSWORD="${SECRETS[DATABASE_PASSWORD]:-postgres}"
-DB_NAME="${CONFIGS[DATABASE_NAME]:-appdb}"
-
-cat > "$SECRETS_DIR/postgres-secret.yaml" <<EOF
+cat > "$POSTGRES_SECRET_FILE" <<EOF
 # PostgreSQL Secret (auto-generated from .env)
 # DO NOT COMMIT THIS FILE TO GIT
 apiVersion: v1
@@ -130,27 +137,6 @@ EOF
 echo "   ✅ PostgreSQL credentials configured"
 echo ""
 
-# Update backend-config.yaml with non-sensitive values
-if [ ${#CONFIGS[@]} -gt 0 ]; then
-    echo "📝 Updating backend-config.yaml..."
-    
-    BACKEND_CONFIG="$PROJECT_ROOT/k8s/backend/configmap.yaml"
-    
-    # Read existing config
-    if [ -f "$BACKEND_CONFIG" ]; then
-        # Append non-sensitive values
-        for key in "${!CONFIGS[@]}"; do
-            # Skip if already in config
-            if ! grep -q "^  $key:" "$BACKEND_CONFIG"; then
-                echo "  $key: \"${CONFIGS[$key]}\"" >> "$BACKEND_CONFIG"
-                echo "   ✅ Added config: $key"
-            fi
-        done
-    fi
-    
-    echo ""
-fi
-
 # Add .gitignore to secrets directory
 cat > "$SECRETS_DIR/.gitignore" <<EOF
 # Never commit secrets to Git
@@ -166,10 +152,9 @@ fi
 echo "✅ Secret generation complete!"
 echo ""
 echo "Generated files:"
-echo "  - $SECRETS_DIR/backend-secret.yaml"
-echo "  - $SECRETS_DIR/postgres-secret.yaml"
+[ -f "$BACKEND_SECRET_FILE" ] && echo "  - $BACKEND_SECRET_FILE"
+echo "  - $POSTGRES_SECRET_FILE"
 echo ""
 echo "⚠️  IMPORTANT: These files contain sensitive data and are gitignored."
 echo "   They will be applied directly to your GKE cluster."
 echo ""
-

@@ -74,6 +74,13 @@ gke:
     
     # Disk size per node in GB (default: 20)
     disk_size_gb: 20
+  
+  # Domain name for HTTPS (optional)
+  # If provided, enables HTTPS with Google-managed SSL certificate
+  # Example: "app.example.com" or "task-app.yourdomain.com"
+  # Leave empty to use HTTP LoadBalancer (IP address only)
+  # Note: You must configure DNS A record pointing to the LoadBalancer IP
+  domain_name: ""
 
 # ────────────────────────────────────────────────────────────────────────────────
 # Seed Data Configuration

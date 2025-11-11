@@ -47,11 +47,17 @@ COPY backend/package*.json ./
 # Copy Prisma schema
 COPY backend/prisma ./prisma
 
-# Install production dependencies only
+# Install production dependencies
 RUN npm ci --omit=dev
+
+# Install TypeScript and type definitions for building (needed for tsc)
+RUN npm install --save-dev typescript @types/node @types/express @types/cors @types/bcrypt @types/jsonwebtoken
 
 # Generate Prisma client
 RUN npx prisma generate
+
+# Copy TypeScript config
+COPY backend/tsconfig.json ./
 
 # Copy source code
 COPY backend/src ./src

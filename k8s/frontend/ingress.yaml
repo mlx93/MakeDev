@@ -1,0 +1,40 @@
+# Frontend Ingress (HTTPS with Google-managed SSL)
+# Only created if domain_name is configured in config.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend-ingress
+  namespace: zero-to-running-app
+  labels:
+    app: frontend
+    tier: frontend
+  annotations:
+    # Use Google-managed SSL certificate
+    networking.gke.io/managed-certificates: "frontend-ssl-cert"
+    # Enable HTTP to HTTPS redirect
+    kubernetes.io/ingress.allow-http: "false"
+spec:
+  # Use Google Cloud Load Balancer (replaces deprecated annotation)
+  ingressClassName: "gce"
+  rules:
+  - host: DOMAIN_PLACEHOLDER
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-service
+            port:
+              number: 80
+---
+# Google-managed SSL Certificate
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: frontend-ssl-cert
+  namespace: zero-to-running-app
+spec:
+  domains:
+    - DOMAIN_PLACEHOLDER
+

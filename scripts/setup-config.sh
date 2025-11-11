@@ -91,6 +91,17 @@ machine_type=${machine_type:-e2-medium}
 read -p "Enter number of nodes (default: 2): " node_count
 node_count=${node_count:-2}
 
+echo ""
+echo "🌐 Domain Name (Optional - for HTTPS)"
+echo "──────────────────────────────────────────"
+echo ""
+echo "If you have a domain name, enter it to enable HTTPS with SSL."
+echo "Example: app.example.com or task-app.yourdomain.com"
+echo "Leave empty to use HTTP with IP address (for testing)."
+echo ""
+read -p "Enter domain name (optional, press Enter to skip): " domain_name
+domain_name=${domain_name:-""}
+
 # Generate config.yaml
 echo ""
 echo "📝 Generating config.yaml..."
@@ -128,6 +139,8 @@ gke:
     machine_type: "$machine_type"
     node_count: $node_count
     disk_size_gb: 20
+  
+  domain_name: "$domain_name"
 
 seed:
   users: 30
@@ -146,6 +159,11 @@ echo "  GCP Region:        $gcp_region"
 echo "  Cluster Name:      ${cluster_name:-$project_name-cluster (auto)}"
 echo "  Machine Type:      $machine_type"
 echo "  Node Count:        $node_count"
+if [ -n "$domain_name" ]; then
+    echo "  Domain Name:       $domain_name (HTTPS enabled)"
+else
+    echo "  Domain Name:       (not set - using HTTP)"
+fi
 echo "──────────────────────────────────────────"
 echo ""
 echo "🚀 Next Steps:"
