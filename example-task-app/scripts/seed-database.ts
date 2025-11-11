@@ -15,8 +15,6 @@ import { parse } from 'yaml'
 import { faker } from '@faker-js/faker'
 import { PrismaClient } from '@prisma/client'
 
-// Faker v8+ uses English (US) by default, no need to set locale
-
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
@@ -110,14 +108,9 @@ const fieldToFaker: Record<string, (field: Field) => any> = {
   name: () => faker.person.fullName(),
   firstName: () => faker.person.firstName(),
   lastName: () => faker.person.lastName(),
-  title: () => {
-    // Generate realistic task titles
-    const actions = ['Review', 'Update', 'Fix', 'Implement', 'Test', 'Deploy', 'Document', 'Optimize', 'Refactor', 'Create']
-    const subjects = ['API endpoint', 'database schema', 'user interface', 'authentication flow', 'email template', 'report generation', 'payment integration', 'search functionality', 'mobile layout', 'error handling']
-    return `${faker.helpers.arrayElement(actions)} ${faker.helpers.arrayElement(subjects)}`
-  },
-  description: () => faker.hacker.phrase(),
-  content: () => faker.hacker.phrase(),
+  title: () => faker.lorem.sentence({ min: 3, max: 8 }),
+  description: () => faker.lorem.paragraph(),
+  content: () => faker.lorem.paragraphs({ min: 1, max: 3 }),
   createdAt: () => faker.date.recent({ days: 30 }),
   updatedAt: () => faker.date.recent({ days: 7 }),
   password: () => '$2a$10$' + faker.string.alphanumeric(53), // bcrypt hash placeholder
@@ -177,7 +170,7 @@ function generateFieldValue(field: Field, modelName: string, existingIds: Record
   // Default based on type
   switch (field.type) {
     case 'String':
-      return faker.company.catchPhrase()
+      return faker.lorem.word()
     case 'Int':
       return faker.number.int({ min: 1, max: 1000 })
     case 'Float':
@@ -187,7 +180,7 @@ function generateFieldValue(field: Field, modelName: string, existingIds: Record
     case 'DateTime':
       return faker.date.recent({ days: 30 })
     case 'Json':
-      return { data: faker.company.catchPhrase() }
+      return { data: faker.lorem.sentence() }
     default:
       // Try to detect enum
       if (field.type.match(/^[A-Z][a-zA-Z]*$/)) {
@@ -229,21 +222,14 @@ function parsePrismaSchema(schema: string): Model[] {
 
     while ((fieldMatch = fieldRegex.exec(modelBody)) !== null) {
       const fieldName = fieldMatch[1]
-      const fieldTypeRaw = fieldMatch[2]
-      const fieldType = fieldTypeRaw.replace(/[?\[\]]/g, '')
+      const fieldType = fieldMatch[2].replace(/[?\[\]]/g, '')
       const attributes = fieldMatch[3] || ''
 
-      const isOptional = fieldTypeRaw.includes('?')
+      const isOptional = fieldMatch[2].includes('?')
       const isId = attributes.includes('@id')
       const hasDefault = attributes.includes('@default')
       const isUnique = attributes.includes('@unique')
-      // A field is a relation if it has @relation attribute, has array type (Task[]), 
-      // or is a non-scalar type (starts with uppercase and isn't a known Prisma type)
-      const isArray = fieldTypeRaw.includes('[')
-      const isRelationAttribute = attributes.includes('@relation') || attributes.includes('references')
-      const isNonScalarType = /^[A-Z]/.test(fieldType) && 
-        !['String', 'Int', 'Float', 'Boolean', 'DateTime', 'Json', 'Decimal', 'BigInt', 'Bytes'].includes(fieldType)
-      const isForeignKey = isArray || isRelationAttribute || (isNonScalarType && !attributes.includes('@default'))
+      const isForeignKey = attributes.includes('@relation') || attributes.includes('references')
 
       fields.push({
         name: fieldName,
@@ -275,64 +261,23 @@ async function generateSeedData() {
 
     // Find User model (if exists) and generate users first
     const userModel = models.find(m => m.name.toLowerCase() === 'user')
-    let demoUserEmail = ''
-    let demoUserPassword = ''
-    
     if (userModel) {
       console.log(`\n👥 Generating ${userCount} users...`)
       
       // Check if users already exist (for idempotency)
       const existingUsers = await (prisma as any)[userModel.name].findMany({
-        select: { id: true, email: true }
+        select: { id: true }
       })
-      
-      // Check if demo user exists
-      const demoUser = existingUsers.find((u: any) => u.email === 'demo@example.com')
       
       if (existingUsers.length > 0) {
         console.log(`   ⚠️  ${existingUsers.length} users already exist, skipping user generation`)
         existingIds[userModel.name] = existingUsers.map((u: any) => u.id)
-        if (demoUser) {
-          demoUserEmail = 'demo@example.com'
-          demoUserPassword = 'demo123'
-        }
       } else {
         const users = []
-        
-        // First, create a demo user with known credentials
-        const demoUserData: any = {}
-        demoUserEmail = 'demo@example.com'
-        demoUserPassword = 'demo123'
-        
-        for (const field of userModel.fields) {
-          // Skip auto-generated IDs and relation fields
-          if (field.isId && field.hasDefault) continue
-          if (field.isForeignKey) continue
-          
-          // Set specific values for demo user
-          if (field.name === 'email') {
-            demoUserData[field.name] = demoUserEmail
-          } else if (field.name === 'name') {
-            demoUserData[field.name] = 'Demo User'
-          } else if (field.name === 'password') {
-            // Pre-computed bcrypt hash of 'demo123' (generated with bcrypt.hash('demo123', 10))
-            demoUserData[field.name] = '$2b$10$O4KPD/hkO0k3Stoopw6twOm4Fgs.Fb2Zrb8EAAFiWo8KMaj.tEhJS'
-          } else {
-            const value = generateFieldValue(field, userModel.name, existingIds)
-            if (value !== undefined) {
-              demoUserData[field.name] = value
-            }
-          }
-        }
-        users.push(demoUserData)
-        
-        // Generate remaining random users
-        for (let i = 1; i < userCount; i++) {
+        for (let i = 0; i < userCount; i++) {
           const userData: any = {}
           for (const field of userModel.fields) {
-            // Skip auto-generated IDs and relation fields
             if (field.isId && field.hasDefault) continue
-            if (field.isForeignKey) continue
             const value = generateFieldValue(field, userModel.name, existingIds)
             if (value !== undefined) {
               userData[field.name] = value
@@ -386,15 +331,9 @@ async function generateSeedData() {
         for (let i = 0; i < taskCount; i++) {
           const taskData: any = {}
           for (const field of taskModel.fields) {
-            // Skip auto-generated IDs
             if (field.isId && field.hasDefault) continue
-            
-            // Skip relation object fields (user User @relation(...))
-            // These are handled by Prisma via foreign key fields
-            if (field.isForeignKey && field.type !== 'Int' && field.type !== 'String') continue
-            
-            // Set scalar foreign key fields (userId Int)
-            if (field.name.toLowerCase().includes('user') && field.name.toLowerCase().includes('id')) {
+            // Set userId foreign key
+            if (field.isForeignKey && field.name.toLowerCase().includes('user')) {
               taskData[field.name] = userId
             } else {
               const value = generateFieldValue(field, taskModel.name, existingIds)
@@ -440,9 +379,7 @@ async function generateSeedData() {
         for (let i = 0; i < recordCount; i++) {
           const recordData: any = {}
           for (const field of model.fields) {
-            // Skip auto-generated IDs and relation fields
             if (field.isId && field.hasDefault) continue
-            if (field.isForeignKey) continue
             const value = generateFieldValue(field, model.name, existingIds)
             if (value !== undefined) {
               recordData[field.name] = value
@@ -469,15 +406,6 @@ async function generateSeedData() {
     for (const [model, count] of Object.entries(stats)) {
       console.log(`   ${model}: ${count} records`)
     }
-    
-    // Display demo user credentials if they exist
-    if (demoUserEmail && demoUserPassword) {
-      console.log('\n🔑 Demo User Credentials:')
-      console.log(`   Email:    ${demoUserEmail}`)
-      console.log(`   Password: ${demoUserPassword}`)
-      console.log('\n   Use these credentials to log in at http://localhost:3000')
-    }
-    
     console.log(`\n⏱️  Execution time: ${duration}s`)
 
   } catch (error) {

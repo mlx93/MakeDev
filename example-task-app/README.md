@@ -7,20 +7,23 @@ A simple task management application demonstrating the Zero-to-Running Developer
 ## Quick Start
 
 ```bash
-# 1. Clone the tool repository
-git clone https://github.com/wander/zero-to-running-dev-env.git
-cd zero-to-running-dev-env
+# From the Zero-to-Running Developer Environment tool root directory:
 
-# 2. Configure to use this example app
-cp config.yaml.example config.yaml
-# Edit config.yaml:
-#   project.name: "task-app"
-#   project.git_repo: "https://github.com/wander/example-task-app.git"
-#   gke.project_id: "your-gcp-project-id"
+# 1. Start the example app
+make dev SUBDIR=example-task-app
 
-# 3. Start the environment
-make dev
+# 2. Seed the database with test data
+make seed SUBDIR=example-task-app
+
+# 3. Access the application
+# Frontend: http://localhost:3000
+# Backend API: http://localhost:8080
 ```
+
+The app will automatically:
+- Start all services (frontend, backend, PostgreSQL, Redis)
+- Run database migrations
+- Enable hot reload for development
 
 ---
 
@@ -63,19 +66,22 @@ make dev
 example-task-app/
 ├── frontend/                    # React application
 │   ├── src/
-│   │   ├── components/         # UI components
-│   │   ├── pages/              # Page components
-│   │   ├── context/            # React context providers
-│   │   └── utils/              # Utilities (API client, etc.)
+│   │   ├── components/         # UI components (TaskList, TaskForm, TaskItem, Layout)
+│   │   ├── pages/              # Page components (Login, Register, Dashboard)
+│   │   ├── contexts/           # React context providers (AuthContext)
+│   │   └── lib/                # Utilities (API client)
+│   ├── package.json
+│   └── vite.config.ts
+├── backend/                     # Express API
+│   ├── src/
+│   │   ├── routes/             # API routes (auth, tasks, health)
+│   │   ├── middleware/         # Express middleware (auth, error handling)
+│   │   └── utils/              # Utilities (validation schemas)
+│   ├── prisma/
+│   │   └── schema.prisma       # Database schema (User, Task models)
 │   └── package.json
-└── backend/                     # Express API
-    ├── src/
-    │   ├── routes/             # API routes
-    │   ├── middleware/         # Express middleware
-    │   └── services/           # Business logic
-    ├── prisma/
-    │   └── schema.prisma       # Database schema
-    └── package.json
+├── config.yaml                  # Project configuration
+└── README.md                    # This file
 ```
 
 ---
@@ -99,13 +105,20 @@ For production deployment, create `.env.production` (or the tool will use `.env`
 
 ## Available Commands
 
-From the tool repository:
+From the Zero-to-Running Developer Environment tool root directory:
 
 ```bash
-make dev      # Start all services locally
-make seed     # Generate 30 users with 5-10 tasks each
-make deploy   # Deploy to Google Kubernetes Engine
-make destroy  # Teardown all resources
+# Start all services locally (frontend, backend, PostgreSQL, Redis)
+make dev SUBDIR=example-task-app
+
+# Generate 30 users with 5-10 tasks each (uses seed generator)
+make seed SUBDIR=example-task-app
+
+# Deploy to Google Kubernetes Engine (when C&C Part 2 is complete)
+make deploy SUBDIR=example-task-app
+
+# Teardown all resources
+make destroy SUBDIR=example-task-app
 ```
 
 ---
@@ -127,7 +140,21 @@ This creates:
 
 ## API Endpoints
 
-Full API documentation will be added by D&D agent.
+### Authentication
+- `POST /api/v1/auth/register` - Create new user account
+- `POST /api/v1/auth/login` - Authenticate user
+- `GET /api/v1/auth/me` - Get current user (requires auth)
+
+### Tasks
+- `GET /api/v1/tasks` - List user's tasks (query params: status, priority, sort, order, limit, offset)
+- `GET /api/v1/tasks/:id` - Get single task
+- `POST /api/v1/tasks` - Create new task
+- `PATCH /api/v1/tasks/:id` - Update task
+- `DELETE /api/v1/tasks/:id` - Delete task
+
+### Health
+- `GET /api/v1/health` - Basic health check
+- `GET /api/v1/health/ready` - Readiness probe (checks database/Redis)
 
 ---
 
