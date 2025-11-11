@@ -26,15 +26,15 @@ echo "   Project name: $PROJECT_NAME"
 echo ""
 
 # Check if Git repo is already initialized and connected
+HAS_REMOTE=false
 if [ -d "$PROJECT_ROOT/.git" ]; then
     REMOTE_URL=$(cd "$PROJECT_ROOT" && git remote get-url origin 2>/dev/null || echo "")
     if [ -n "$REMOTE_URL" ]; then
         echo "✅ Git repository already connected: $REMOTE_URL"
-        echo "   No GitHub setup needed."
-        echo ""
-        return 0 2>/dev/null || exit 0
+        HAS_REMOTE=true
+    else
+        echo "   Git initialized but no remote. Will create GitHub repo..."
     fi
-    echo "   Git initialized but no remote. Will create GitHub repo..."
 else
     echo "   Git not initialized. Will initialize new repository..."
 fi
@@ -89,6 +89,9 @@ fi
 
 echo "   ✅ GitHub CLI authenticated"
 echo ""
+
+# Always ensure changes are committed and pushed (even if repo already exists)
+cd "$PROJECT_ROOT"
 
 # Initialize Git repository if not already initialized
 if [ ! -d "$PROJECT_ROOT/.git" ]; then
@@ -162,14 +165,16 @@ Project: $PROJECT_NAME
 else
     echo "✅ Git repository already initialized"
     
-    # Ensure all current changes are committed before creating GitHub repo
-    cd "$PROJECT_ROOT"
-    if ! git diff-index --quiet HEAD --; then
+    # Always commit any uncommitted changes
+    if ! git diff-index --quiet HEAD -- 2>/dev/null; then
         echo "   📝 Uncommitted changes detected. Committing..."
         git add -A
         git commit -m "Update: $(date +'%Y-%m-%d %H:%M:%S')
 
 Auto-committed during deployment" || true
+        echo "   ✅ Changes committed"
+    else
+        echo "   ✅ No uncommitted changes"
     fi
 fi
 
@@ -180,7 +185,53 @@ echo "📦 Creating GitHub repository..."
 echo "   Repository name: $PROJECT_NAME"
 echo ""
 
-# Check if repo already exists on GitHub
+# If repo already has remote, ensure we commit and push changes
+if [ "$HAS_REMOTE" = true ]; then
+    echo "📤 Ensuring all changes are committed and pushed..."
+    
+    cd "$PROJECT_ROOT"
+    
+    # First, commit any uncommitted changes (in case they weren't committed above)
+    if ! git diff-index --quiet HEAD -- 2>/dev/null; then
+        echo "   📝 Uncommitted changes detected. Committing..."
+        git add -A
+        git commit -m "Update: $(date +'%Y-%m-%d %H:%M:%S')
+
+Auto-committed during deployment" || true
+        echo "   ✅ Changes committed"
+    fi
+    
+    # Get current branch
+    CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "main")
+    
+    # Check if there are unpushed commits
+    HAS_UNPUSHED=$(git rev-list --count origin/$CURRENT_BRANCH..HEAD 2>/dev/null 2>&1 || echo "0")
+    
+    # Handle case where remote branch doesn't exist yet
+    if ! git rev-parse --verify "origin/$CURRENT_BRANCH" &>/dev/null 2>&1; then
+        HAS_UNPUSHED="1"  # Treat as unpushed if branch doesn't exist on remote
+    fi
+    
+    if [ "$HAS_UNPUSHED" != "0" ] && [ "$HAS_UNPUSHED" != "" ]; then
+        echo "   📤 Pushing changes to GitHub..."
+        git push origin "$CURRENT_BRANCH" 2>/dev/null || \
+        git push -u origin "$CURRENT_BRANCH" 2>/dev/null || {
+            echo "   ⚠️  Could not push to remote (non-blocking)"
+            echo "   You can manually push with: git push origin $CURRENT_BRANCH"
+        }
+        echo "   ✅ Changes pushed to GitHub"
+    else
+        echo "   ✅ Repository is up to date (no changes to push)"
+    fi
+    
+    echo ""
+    echo "✅ GitHub setup complete!"
+    echo "   Repository: $REMOTE_URL"
+    echo ""
+    return 0 2>/dev/null || exit 0
+fi
+
+# Create GitHub repository if it doesn't exist
 if gh repo view "$PROJECT_NAME" &> /dev/null; then
     echo "✅ Repository already exists on GitHub: $PROJECT_NAME"
     REPO_URL=$(gh repo view "$PROJECT_NAME" --json url -q .url)
