@@ -46,10 +46,12 @@
 │  • scripts/health-check.sh                                       │
 │  • scripts/setup-local.sh                                       │
 │  • Updated Makefile (dev target)                                 │
+│                                                                   │
+│  ✅ COMPLETE                                                     │
 └────────┬──────────────────────────────────────────────────────────┘
          │
          │ Handoff: Working local dev environment,
-         │          hot reload, health checks
+         │          hot reload, health checks, scaffolding
          │
          ▼
 ┌─────────────────────────────────────────────────────────────────┐
@@ -139,8 +141,8 @@
 | Agent | Order | Phase | Focus | Key Deliverables | Status |
 |-------|-------|-------|-------|------------------|--------|
 | **DXS** | 1 | Planning | Structure & Design | File trees, Makefile stubs, config.yaml, scaffolding design | ✅ Complete |
-| **C&C Part 1** | 2 | Phase 1 | Local Dev | Docker Compose, Dockerfiles, `make dev` working | 🔄 Prompt Ready |
-| **A&D** | 3 | Phase 3 | Tool App | Backend API, Frontend app, seed generator | 📋 Pending |
+| **C&C Part 1** | 2 | Phase 1 | Local Dev | Docker Compose, Dockerfiles, `make dev` working | ✅ Complete |
+| **A&D** | 3 | Phase 3 | Tool App | Backend API, Frontend app, seed generator | 🔄 Prompt Ready |
 | **ETA** | 4 | Phase 3 | Example App | example-task-app repository | 📋 Pending |
 | **C&C Part 2** | 5 | Phase 2 | GKE Deployment | Terraform, K8s manifests, `make deploy` working | 📋 Pending |
 | **D&D** | 6 | Phase 4 | Documentation | READMEs, troubleshooting, demo runbook | 📋 Pending |
@@ -182,12 +184,14 @@ Each agent must pass quality gates before proceeding:
 - Health check contracts defined
 - Scaffolding system designed
 
-### Gate 2: C&C Part 1 Complete 🔄
+### Gate 2: C&C Part 1 Complete ✅
 - Docker Compose working
 - `make dev` works end-to-end
 - All services healthy locally
 - Hot reload working
 - Health checks pass locally
+- Project scaffolding working
+- Subdirectory support implemented
 
 ### Gate 3: A&D Complete 📋
 - Tool's backend API working locally
@@ -261,8 +265,8 @@ Each agent must pass quality gates before proceeding:
 **Estimated Duration**: 6-8 weeks total
 
 - **Week 1**: DXS (Planning) ✅ Complete
-- **Week 1-2**: C&C Part 1 (Local Dev) 🔄 In Progress
-- **Week 2-3**: A&D (Tool App) 📋 Pending
+- **Week 1-2**: C&C Part 1 (Local Dev) ✅ Complete
+- **Week 2-3**: A&D (Tool App) 🔄 Ready to Start
 - **Week 3-4**: ETA (Example App) 📋 Pending
 - **Week 4-5**: C&C Part 2 (GKE Deployment) 📋 Pending
 - **Week 5-6**: D&D (Documentation) 📋 Pending
