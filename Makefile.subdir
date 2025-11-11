@@ -1,0 +1,40 @@
+# Minimal Makefile for subdirectories - auto-bootstraps from parent
+# This file gets copied to subdirectories during bootstrap
+
+.PHONY: dev help
+
+help:
+	@echo "Running make dev from subdirectory..."
+	@echo "Bootstrap will happen automatically..."
+
+dev:
+	@# Find parent tool repository and use its Makefile
+	@PARENT_DIR=$$(pwd); \
+	while [ "$$PARENT_DIR" != "/" ]; do \
+		PARENT_DIR=$$(dirname "$$PARENT_DIR"); \
+		if [ -f "$$PARENT_DIR/Makefile" ] && [ -d "$$PARENT_DIR/docker" ] && [ -d "$$PARENT_DIR/scripts" ]; then \
+			echo "🔧 Bootstrapping from parent tool repository..."; \
+			if [ ! -d "docker" ] || [ ! -d "scripts" ]; then \
+				if [ -f "$$PARENT_DIR/scripts/bootstrap.sh" ]; then \
+					bash "$$PARENT_DIR/scripts/bootstrap.sh"; \
+				else \
+					echo "   Copying tool files..."; \
+					cp -r "$$PARENT_DIR/docker" . 2>/dev/null || true; \
+					cp -r "$$PARENT_DIR/scripts" . 2>/dev/null || true; \
+					cp "$$PARENT_DIR/Makefile" . 2>/dev/null || true; \
+					cp -r "$$PARENT_DIR/scaffold-templates" . 2>/dev/null || true; \
+					[ -f "$$PARENT_DIR/config.yaml.example" ] && cp "$$PARENT_DIR/config.yaml.example" . 2>/dev/null || true; \
+					if [ ! -f "config.yaml" ]; then \
+						cp config.yaml.example config.yaml 2>/dev/null || true; \
+						sed -i.bak 's/git_repo:.*/git_repo: ""/' config.yaml 2>/dev/null || sed -i '' 's/git_repo:.*/git_repo: ""/' config.yaml 2>/dev/null || true; \
+						rm -f config.yaml.bak 2>/dev/null || true; \
+					fi; \
+				fi; \
+			fi; \
+			$$(MAKE) -f Makefile dev; \
+			exit 0; \
+		fi; \
+	done; \
+	echo "❌ Could not find parent tool repository"; \
+	exit 1
+

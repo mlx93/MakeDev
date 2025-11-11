@@ -1,0 +1,7 @@
+# Minimal delegating Makefile - delegates to parent Makefile
+# This file is so small, users can easily create it with one command:
+# echo 'include ../Makefile' > Makefile
+# Then: make dev
+
+include ../Makefile
+

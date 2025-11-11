@@ -1,0 +1,45 @@
+#!/bin/bash
+# Standalone dev script - can be run from any directory (including subdirectories)
+# Usage: Run this script from anywhere: ./dev or bash dev
+# It will find the parent Makefile and run make dev
+
+set -e
+
+CURRENT_DIR="$(pwd)"
+
+# Find parent tool repository
+TOOL_REPO=""
+SEARCH_DIR="$CURRENT_DIR"
+while [ "$SEARCH_DIR" != "/" ]; do
+    if [ -f "$SEARCH_DIR/Makefile" ] && [ -d "$SEARCH_DIR/docker" ] && [ -d "$SEARCH_DIR/scripts" ]; then
+        TOOL_REPO="$SEARCH_DIR"
+        break
+    fi
+    SEARCH_DIR="$(dirname "$SEARCH_DIR")"
+done
+
+# Check environment variable or common locations
+if [ -z "$TOOL_REPO" ]; then
+    if [ -n "$ZERO_TO_RUN_TOOL_PATH" ] && [ -d "$ZERO_TO_RUN_TOOL_PATH" ]; then
+        TOOL_REPO="$ZERO_TO_RUN_TOOL_PATH"
+    elif [ -d "$HOME/zero-to-running-dev-env" ]; then
+        TOOL_REPO="$HOME/zero-to-running-dev-env"
+    elif [ -d "$HOME/Desktop/ZeroToRunDevEnv" ]; then
+        TOOL_REPO="$HOME/Desktop/ZeroToRunDevEnv"
+    fi
+fi
+
+if [ -z "$TOOL_REPO" ] || [ ! -d "$TOOL_REPO" ]; then
+    echo "❌ Could not find tool repository"
+    echo "   Please ensure you're in a subdirectory of the tool repository"
+    echo "   Or set ZERO_TO_RUN_TOOL_PATH environment variable"
+    exit 1
+fi
+
+echo "🔧 Found tool repository at: $TOOL_REPO"
+echo "   Running make dev from current directory: $CURRENT_DIR"
+echo ""
+
+# Run make dev using parent Makefile, but from current directory
+make -C "$CURRENT_DIR" -f "$TOOL_REPO/Makefile" dev
+

@@ -9,31 +9,29 @@
 help: ## Show available commands
 	@echo "Zero-to-Running Developer Environment"
 	@echo ""
-	@echo "Usage: make [target]"
+	@echo "Usage: make [target] [SUBDIR=name]"
 	@echo ""
 	@echo "Targets:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 	@echo "Quick start:"
-	@echo "  1. cp config.yaml.example config.yaml"
-	@echo "  2. Edit config.yaml with your project details"
-	@echo "  3. make dev"
+	@echo "  Option 1 - New project in subdirectory:"
+	@echo "    make dev SUBDIR=my-app"
+	@echo ""
+	@echo "  Option 2 - Existing project:"
+	@echo "    1. cp config.yaml.example config.yaml"
+	@echo "    2. Edit config.yaml with your project details"
+	@echo "    3. make dev"
 
 # ────────────────────────────────────────────────────────────────────────────────
 # Local Development
 # ────────────────────────────────────────────────────────────────────────────────
 dev: ## Start local development environment (Docker Compose)
-	@echo "🚀 Starting local development environment..."
-	@# TODO: Implement by C&C Part 1 agent
-	@# - Check prerequisites (Docker, Node.js)
-	@# - Read config.yaml
-	@# - Clone/detect repository
-	@# - If git_repo empty, run scaffold-project.sh
-	@# - Build Docker images
-	@# - docker-compose up
-	@# - Wait for health checks
-	@# - Run migrations automatically
-	@# - Display URLs (http://localhost:3000, http://localhost:8080)
+	@if [ -n "$(SUBDIR)" ]; then \
+		bash scripts/dev-subdir.sh "$(SUBDIR)"; \
+	else \
+		bash scripts/setup-local.sh; \
+	fi
 
 # ────────────────────────────────────────────────────────────────────────────────
 # Data Seeding
