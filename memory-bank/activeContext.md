@@ -1,19 +1,43 @@
 # Active Context: Zero-to-Running Developer Environment
 
-**Last Updated:** November 10, 2025  
-**Current Phase:** Phase 3 - Advanced Features (ETA Agent)
+**Last Updated:** November 11, 2025  
+**Current Phase:** Phase 2 - GKE Deployment (C&C Part 2 Agent)
 
 ---
 
 ## Current Work Focus
 
-**Next Agent:** ETA (Example Task App) Agent  
+**Next Agent:** C&C Part 2 (Containers & Cloud - GKE Deployment) Agent  
 **Status:** Ready to spawn  
-**Prompt:** `agent_prompts/ETA_AGENT_PROMPT.md` (to be created)
+**Prompt:** `agent_prompts/CC_PART2_AGENT_PROMPT.md` (to be created)
 
 ---
 
 ## Recent Changes
+
+### ETA Agent Complete (November 11, 2025)
+
+**Delivered:**
+- ✅ Complete example-task-app repository (`example-task-app/`)
+- ✅ Prisma schema (User + Task models with relationships and enums)
+- ✅ Backend API (JWT authentication + full task CRUD)
+- ✅ Frontend app (React + Tailwind with task management UI)
+- ✅ Docker Compose configuration for local development
+- ✅ Demo user credentials (demo@example.com / demo123)
+- ✅ English-only seed data generation
+- ✅ Tool improvements (lock file management, Docker rebuild detection, relation field handling)
+
+**Key Features:**
+- Full authentication flow (register, login, JWT)
+- Complete task CRUD operations (create, read, update, delete)
+- Task filtering and sorting
+- Responsive UI with Tailwind CSS
+- Works seamlessly with `make dev` and `make seed`
+- Smooth loading states to prevent UI flicker
+
+**Report:** `agent_reports/ETA_Agent_Report_Done.md`
+
+---
 
 ### A&D Agent Complete (November 10, 2025)
 
@@ -65,29 +89,30 @@
 
 ## Next Steps
 
-### Immediate: ETA Agent Implementation
+### Immediate: C&C Part 2 Agent Implementation
 
-**What ETA Needs to Build:**
-1. **Complete example-task-app Repository** - Separate repo demonstrating tool capabilities
-2. **Prisma Schema** - User and Task models with relationships
-3. **Backend API** - Express routes (auth, tasks CRUD)
-4. **Frontend App** - React components (login, dashboard, task management UI)
-5. **Full Task Management** - Complete CRUD functionality
+**What C&C Part 2 Needs to Build:**
+1. **Terraform Configuration** - GKE cluster provisioning (detect existing, reuse if found)
+2. **Kubernetes Manifests** - All services (frontend, backend, PostgreSQL, Redis)
+3. **Deployment Scripts** - `scripts/deploy-gke.sh`, `scripts/env-to-k8s-secrets.sh`
+4. **Makefile Integration** - Wire `deploy` and `destroy` targets
+5. **Secret Management** - Convert .env to K8s Secrets/ConfigMaps
+6. **Cleanup Scripts** - `scripts/cleanup.sh` for teardown
 
 **Dependencies Ready:**
-- ✅ Docker Compose infrastructure working (`make dev`)
-- ✅ Seed generator available (`make seed` works with any schema)
-- ✅ Enhanced health endpoints implemented
-- ✅ Hot reload configured
-- ✅ Migrations auto-run on startup
-- ✅ Project scaffolding system ready
+- ✅ Local development working (`make dev` functional)
+- ✅ Example app complete and tested (example-task-app)
+- ✅ Docker images build successfully
+- ✅ Health endpoints implemented (ready for K8s probes)
+- ✅ All services tested locally
 
 **Key Files to Reference:**
-- `agent_reports/A&D_Agent_Report_Done.md` - A&D handoff details (seed generator, health endpoints)
+- `agent_reports/ETA_Agent_Report_Done.md` - ETA handoff details (example app)
+- `agent_reports/A&D_Agent_Report_Done.md` - A&D handoff details
 - `agent_reports/cc_part1_agent_done_report.md` - C&C Part 1 handoff details
 - `agent_reports/DXS_Agent_Done_Report.md` - DXS planning artifacts
-- `PRD_1_Product_v2.md` - User stories and requirements
-- `PRD_2_Tech_Spec_v2.md` - Technical specifications
+- `PRD_1_Product_v2.md` - User stories (US-012, US-013, US-014)
+- `PRD_2_Tech_Spec_v2.md` - Technical specs (sections 8-9: Terraform, Kubernetes)
 
 ---
 
@@ -101,7 +126,8 @@
 
 ### Implementation Notes
 - A&D built **tool infrastructure** (seed generator, enhanced health endpoints)
-- ETA builds **example-task-app** (complete task CRUD app in separate repo)
+- ETA built **example-task-app** (complete task CRUD app, fully functional)
+- C&C Part 2 will build **GKE deployment infrastructure** (Terraform + K8s)
 - Seed generator works with any Prisma schema (schema-agnostic)
 - Health endpoints check database/Redis connectivity
 
@@ -125,33 +151,38 @@
 
 ## Handoff Information
 
-### A&D → ETA Handoff
+### ETA → C&C Part 2 Handoff
 
 **What Works:**
-- `make dev` starts all services successfully
-- `make seed` generates realistic test data (schema-agnostic)
-- Enhanced health endpoints check database/Redis connectivity
-- Seed generator reads Prisma schema dynamically
-- All dependencies available (ioredis, @faker-js/faker, yaml)
+- `make dev` works end-to-end with example-task-app
+- Full authentication and CRUD functionality tested
+- Example app accessible at http://localhost:3000
+- Backend API working at http://localhost:8080
+- Database seeded with demo user and test data
+- All services healthy locally
 
-**What ETA Needs to Implement:**
-- Complete `example-task-app/` repository (separate repo)
-- Prisma schema (User + Task models)
-- Backend API (auth endpoints, task CRUD endpoints)
-- Frontend app (login, dashboard, task management UI)
-- Full task management functionality
+**What C&C Part 2 Needs to Implement:**
+- Terraform configuration for GKE cluster provisioning
+- Kubernetes manifests for all services (frontend, backend, PostgreSQL, Redis)
+- `make deploy` command (provisions cluster, builds images, deploys to GKE)
+- `make destroy` command (cleanup with confirmation)
+- Secret management (convert .env to K8s Secrets/ConfigMaps)
+- Image push to Artifact Registry
+- LoadBalancer configuration for frontend
 
 **File Locations:**
-- Example app repo: `example-task-app/` (separate directory)
-- Backend code: `example-task-app/backend/src/`
-- Frontend code: `example-task-app/frontend/src/`
-- Prisma schema: `example-task-app/backend/prisma/schema.prisma`
+- Terraform: `terraform/` directory
+- K8s manifests: `k8s/` directory (frontend/, backend/, postgres/, redis/)
+- Deployment scripts: `scripts/deploy-gke.sh`, `scripts/env-to-k8s-secrets.sh`
+- Cleanup script: `scripts/cleanup.sh`
 
-**Seed Generator Compatibility:**
-- ETA's User/Task schema will work with existing seed generator
-- `make seed` will generate 30 users with 5-10 tasks each (configurable via config.yaml)
+**Deployment Requirements:**
+- GCP project must exist (user provides project_id)
+- Artifact Registry (not legacy GCR)
+- Cluster reuse automatic (detect existing, reuse if found)
+- .env.production preferred for GKE (fallback to .env)
 
 ---
 
-**Status:** Ready for ETA agent spawn. All tool infrastructure complete.
+**Status:** Ready for C&C Part 2 agent spawn. Example app complete and tested locally.
 
