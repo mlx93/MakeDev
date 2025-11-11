@@ -46,3 +46,6 @@ temp/
 my-test-app/
 test-app/
 
+# Example Task App (separate repository)
+example-task-app/
+
