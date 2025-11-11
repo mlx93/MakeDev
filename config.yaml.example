@@ -74,7 +74,7 @@ gke:
     
     # Disk size per node in GB (default: 20)
     disk_size_gb: 20
-  
+
   # Domain name for HTTPS (optional)
   # If provided, enables HTTPS with Google-managed SSL certificate
   # Example: "app.example.com" or "task-app.yourdomain.com"

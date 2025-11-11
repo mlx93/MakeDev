@@ -838,6 +838,105 @@ fi
 echo ""
 
 # ────────────────────────────────────────────────────────────────────────────────
+# Step 15c: Seed Database
+# ────────────────────────────────────────────────────────────────────────────────
+echo "🌱 Seeding database with test data..."
+
+# Check if backend directory exists
+if [ ! -d "$PROJECT_ROOT/backend" ]; then
+    echo "   ⚠️  Backend directory not found - skipping seed"
+elif [ ! -f "$PROJECT_ROOT/backend/prisma/schema.prisma" ]; then
+    echo "   ⚠️  Prisma schema not found - skipping seed"
+else
+    # Get a backend pod name (use the first running backend pod)
+    BACKEND_POD=$(kubectl get pods -n "$K8S_NAMESPACE" -l app=backend --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+    
+    if [ -z "$BACKEND_POD" ]; then
+        echo "   ⚠️  No running backend pod found - skipping seed"
+        echo "   You can manually seed later with: make seed SUBDIR=$(basename "$PROJECT_ROOT")"
+    else
+        echo "   Using backend pod: $BACKEND_POD"
+        echo "   Copying seed script and config to pod..."
+        
+        # Create temporary directory in pod for seed files
+        kubectl exec -n "$K8S_NAMESPACE" "$BACKEND_POD" -- mkdir -p /tmp/seed 2>/dev/null || true
+        
+        # Copy seed script to pod
+        kubectl cp "$TOOL_DIR/scripts/seed-database.ts" "$K8S_NAMESPACE/$BACKEND_POD:/tmp/seed/seed-database.ts" 2>/dev/null
+        
+        # Copy config.yaml to pod if it exists (for seed configuration)
+        if [ -f "$PROJECT_ROOT/config.yaml" ]; then
+            kubectl cp "$PROJECT_ROOT/config.yaml" "$K8S_NAMESPACE/$BACKEND_POD:/tmp/seed/config.yaml" 2>/dev/null || true
+        fi
+        
+        if [ $? -eq 0 ] || [ -f "$PROJECT_ROOT/config.yaml" ]; then
+            echo "   Installing seed script dependencies..."
+            
+            # Install required dependencies for seed script
+            # yaml, @faker-js/faker, and tsx are dev dependencies not in production image
+            # Use --force to ensure installation even if package.json doesn't list them
+            # Use --legacy-peer-deps to avoid peer dependency conflicts
+            INSTALL_OUTPUT=$(kubectl exec -n "$K8S_NAMESPACE" "$BACKEND_POD" -- \
+                sh -c "cd /app/backend && npm install --no-save --force --legacy-peer-deps yaml@2.3.4 @faker-js/faker@8.3.1 tsx@4.7.0 2>&1" 2>&1)
+            
+            # Verify the packages are actually installed by checking node_modules
+            VERIFY_OUTPUT=$(kubectl exec -n "$K8S_NAMESPACE" "$BACKEND_POD" -- \
+                sh -c "cd /app/backend && test -d node_modules/yaml && test -d node_modules/@faker-js/faker && test -d node_modules/tsx && echo 'installed' || echo 'missing'" 2>&1)
+            
+            if echo "$VERIFY_OUTPUT" | grep -q "installed"; then
+                echo "   ✅ Dependencies installed and verified"
+            else
+                echo "   ⚠️  Warning: Dependencies may not be installed correctly"
+                echo "   Verification output: $VERIFY_OUTPUT"
+                echo "   Attempting alternative installation method..."
+                # Try installing to a temp directory and using NODE_PATH
+                kubectl exec -n "$K8S_NAMESPACE" "$BACKEND_POD" -- \
+                    sh -c "mkdir -p /tmp/node_modules && cd /tmp && npm install --no-save yaml@2.3.4 @faker-js/faker@8.3.1 tsx@4.7.0 2>&1" 2>&1 || true
+            fi
+            
+            echo "   Running seed script in pod..."
+            
+            # In pod: WORKDIR is /app/backend, so project root should be /app
+            # Seed script will look for config.yaml at /app/config.yaml or use defaults
+            # Schema is at /app/backend/prisma/schema.prisma
+            # DATABASE_URL is already set as env var in the pod
+            
+            # Run seed script - it will detect project root or use /app
+            # The script uses process.env.DATABASE_URL which is already set in the pod
+            # Use NODE_PATH to ensure modules are found (check both locations)
+            if kubectl exec -n "$K8S_NAMESPACE" "$BACKEND_POD" -- \
+                sh -c "cd /app/backend && \
+                       export NODE_PATH=/app/backend/node_modules:/tmp/node_modules:\$NODE_PATH && \
+                       if [ -f /tmp/seed/config.yaml ]; then \
+                         mkdir -p /app && cp /tmp/seed/config.yaml /app/config.yaml; \
+                       fi && \
+                       npx tsx /tmp/seed/seed-database.ts /app 2>&1" 2>&1; then
+                echo "   ✅ Database seeded successfully"
+            else
+                # Try without config.yaml (use defaults)
+                echo "   Retrying with default seed configuration..."
+                if kubectl exec -n "$K8S_NAMESPACE" "$BACKEND_POD" -- \
+                    sh -c "cd /app/backend && export NODE_PATH=/app/backend/node_modules:/tmp/node_modules:\$NODE_PATH && npx tsx /tmp/seed/seed-database.ts /app 2>&1" 2>&1; then
+                    echo "   ✅ Database seeded successfully (using defaults)"
+                else
+                    echo "   ⚠️  Seed script failed - database may be empty"
+                    echo "   You can manually seed later with: make seed SUBDIR=$(basename "$PROJECT_ROOT")"
+                fi
+            fi
+            
+            # Clean up seed files from pod
+            kubectl exec -n "$K8S_NAMESPACE" "$BACKEND_POD" -- rm -rf /tmp/seed 2>/dev/null || true
+            kubectl exec -n "$K8S_NAMESPACE" "$BACKEND_POD" -- rm -f /app/config.yaml 2>/dev/null || true
+        else
+            echo "   ⚠️  Could not copy seed script to pod - skipping seed"
+            echo "   You can manually seed later with: make seed SUBDIR=$(basename "$PROJECT_ROOT")"
+        fi
+    fi
+fi
+
+echo ""
+
+# ────────────────────────────────────────────────────────────────────────────────
 # Step 16: Get Application URL
 # ────────────────────────────────────────────────────────────────────────────────
 if [ -n "$DOMAIN_NAME" ] && [ "$DOMAIN_NAME" != "null" ] && [ "$DOMAIN_NAME" != "" ]; then
