@@ -21,18 +21,6 @@ provider "google" {
   region  = var.gcp_region
 }
 
-# Check for existing cluster using data source
-data "google_container_cluster" "existing" {
-  name     = var.cluster_name
-  location = var.gcp_region
-  
-  # This will return null if cluster doesn't exist
-  # We use this to detect and reuse existing clusters
-  lifecycle {
-    ignore_changes = all
-  }
-}
-
 # GKE Cluster Resource
 # Only creates if cluster doesn't already exist
 resource "google_container_cluster" "primary" {

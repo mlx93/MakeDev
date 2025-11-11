@@ -81,6 +81,9 @@ PROJECT_NAME=$(grep "name:" "$PROJECT_ROOT/config.yaml" | head -1 | awk -F': ' '
 GCP_PROJECT_ID=$(grep "project_id:" "$PROJECT_ROOT/config.yaml" | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
 GCP_REGION=$(grep "region:" "$PROJECT_ROOT/config.yaml" | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
 CLUSTER_NAME=$(grep "cluster_name:" "$PROJECT_ROOT/config.yaml" | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
+MACHINE_TYPE=$(grep "machine_type:" "$PROJECT_ROOT/config.yaml" | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
+NODE_COUNT=$(grep "node_count:" "$PROJECT_ROOT/config.yaml" | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
+DISK_SIZE_GB=$(grep "disk_size_gb:" "$PROJECT_ROOT/config.yaml" | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
 
 # Validate required values
 if [ -z "$PROJECT_NAME" ]; then
@@ -97,11 +100,16 @@ fi
 # Set defaults
 GCP_REGION=${GCP_REGION:-us-central1}
 CLUSTER_NAME=${CLUSTER_NAME:-${PROJECT_NAME}-cluster}
+MACHINE_TYPE=${MACHINE_TYPE:-e2-medium}
+NODE_COUNT=${NODE_COUNT:-2}
+DISK_SIZE_GB=${DISK_SIZE_GB:-20}
 
 echo "   Project: $PROJECT_NAME"
 echo "   GCP Project: $GCP_PROJECT_ID"
 echo "   Region: $GCP_REGION"
 echo "   Cluster: $CLUSTER_NAME"
+echo "   Machine Type: $MACHINE_TYPE"
+echo "   Node Count: $NODE_COUNT"
 echo ""
 
 # ────────────────────────────────────────────────────────────────────────────────
@@ -222,6 +230,9 @@ if [ "$CLUSTER_EXISTS" = false ]; then
         -var="gcp_project_id=$GCP_PROJECT_ID" \
         -var="gcp_region=$GCP_REGION" \
         -var="cluster_name=$CLUSTER_NAME" \
+        -var="machine_type=$MACHINE_TYPE" \
+        -var="node_count=$NODE_COUNT" \
+        -var="disk_size_gb=$DISK_SIZE_GB" \
         -auto-approve
     
     echo ""
