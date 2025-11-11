@@ -1,7 +1,8 @@
 # Active Context: Zero-to-Running Developer Environment
 
 **Last Updated:** November 11, 2025  
-**Current Phase:** Phase 4 - Documentation & Demo (D&D Agent)
+**Current Phase:** Phase 4 - Documentation & Demo (D&D Agent)  
+**Status:** C&C Part 2 Complete with All Production Enhancements
 
 ---
 
@@ -23,12 +24,17 @@
 - ✅ Deployment scripts (`scripts/deploy-gke.sh`, `scripts/setup-github.sh`, `scripts/env-to-k8s-secrets.sh`)
 - ✅ Cleanup script (`scripts/cleanup.sh`)
 - ✅ Makefile integration (`deploy` and `destroy` targets)
-- ✅ GitHub automation (auto-install CLI, create repo, push code)
+- ✅ GitHub automation (auto-install CLI, create repo, automatic commit/push)
 - ✅ Secret management (convert .env to K8s Secrets/ConfigMaps)
 
 **Enhancements Beyond Initial Scope:**
 - ✅ HTTPS support with automatic SSL certificates
 - ✅ Automatic DNS configuration
+- ✅ HTTP LoadBalancer mode support (faster deployment, 2-5 min vs 10-20 min)
+- ✅ Nginx API proxy configuration (frontend-backend communication)
+- ✅ Dynamic Kubernetes namespace generation (based on project name)
+- ✅ Seed script dependency installation fixes (fallback to /tmp/node_modules)
+- ✅ Automatic git commit/push during deployment
 - ✅ Database improvements and optimizations
 - ✅ Bug fixes and production hardening
 
@@ -36,12 +42,17 @@
 - `make deploy` works end-to-end (provisions cluster, builds images, deploys to GKE)
 - `make destroy` works end-to-end (safe teardown with confirmation)
 - GitHub CLI auto-installation and repo creation
+- Automatic git commit/push during deployment
 - Cluster reuse detection (doesn't recreate existing clusters)
-- Production-ready with HTTPS and DNS support
+- Dynamic namespace based on project name (no conflicts between projects)
+- HTTP LoadBalancer mode (comment out domain_name for faster deployment)
+- Nginx API proxy (frontend automatically routes /api/* to backend)
+- Production-ready with HTTPS/DNS support
 
 **Reports:**
 - `agent_reports/CC_PART2_Agent_Report_Done.md` - Initial implementation
-- `agent_reports/CC_PART2_Agent_Report_Updates.md` - Post-implementation enhancements
+- `agent_reports/CC_PART2_Agent_Report_Updates.md` - Post-implementation enhancements (HTTPS/DNS)
+- `agent_reports/CC_PART2_Agent_Report_Final_Updates.md` - Final production fixes (dynamic namespace, HTTP mode, nginx proxy, git automation, seed fixes)
 
 ---
 
@@ -138,7 +149,8 @@
 
 **Key Files to Reference:**
 - `agent_reports/CC_PART2_Agent_Report_Done.md` - C&C Part 2 initial implementation
-- `agent_reports/CC_PART2_Agent_Report_Updates.md` - C&C Part 2 enhancements
+- `agent_reports/CC_PART2_Agent_Report_Updates.md` - C&C Part 2 enhancements (HTTPS/DNS)
+- `agent_reports/CC_PART2_Agent_Report_Final_Updates.md` - C&C Part 2 final production fixes (dynamic namespace, HTTP mode, nginx proxy, git automation, seed fixes)
 - `agent_reports/ETA_Agent_Report_Done.md` - Example app details
 - `agent_reports/A&D_Agent_Report_Done.md` - Tool infrastructure
 - `agent_reports/cc_part1_agent_done_report.md` - Local dev setup
@@ -190,10 +202,14 @@
 **What Works:**
 - `make deploy` works end-to-end (provisions cluster, builds images, deploys to GKE)
 - `make destroy` works end-to-end (safe teardown with confirmation)
-- GitHub automation working (auto-install CLI, create repo, push code)
+- GitHub automation working (auto-install CLI, create repo, automatic commit/push)
 - All services healthy in GKE (frontend, backend, PostgreSQL, Redis)
 - HTTPS support with automatic SSL certificates
 - Automatic DNS configuration
+- HTTP LoadBalancer mode (comment out domain_name for faster deployment)
+- Nginx API proxy (frontend automatically routes /api/* to backend)
+- Dynamic namespace generation (based on project name, no conflicts)
+- Seed script works automatically during deployment (with dependency fallback)
 - Production-ready deployment infrastructure
 
 **What D&D Needs to Implement:**
@@ -205,7 +221,7 @@
 
 **File Locations:**
 - Main README: `README.md` (update existing)
-- User README: `USER_README.md` (update existing)
+- Example app README: `example-task-app/README.md` (update existing)
 - Troubleshooting: `TROUBLESHOOTING.md` (create new)
 - Demo runbook: `DEMO_RUNBOOK.md` (create new)
 - Setup instructions: `docs/SETUP_INSTRUCTIONS.md` (update existing)

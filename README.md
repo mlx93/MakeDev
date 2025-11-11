@@ -53,14 +53,50 @@ For `make deploy` (GKE), you'll also need:
 
 ## Commands
 
-**Core Commands (4 total):**
+**Core Commands:**
 
 ```bash
+make help     # Display all available commands
 make dev      # Start all services (frontend, backend, postgres, redis)
-make seed     # Generate fake data for testing
+make seed     # Generate fake data for testing (30 users, 5-10 tasks each)
+make config   # Interactive config.yaml generator
 make deploy   # Deploy to Google Kubernetes Engine
 make destroy  # Teardown all resources (local + GKE)
 ```
+
+**Command Details:**
+
+- **`make dev [SUBDIR=name]`** - Starts local development environment
+  - Scaffolds new project if `git_repo` is empty
+  - Clones repository if `git_repo` is set
+  - Builds Docker images and starts all services
+  - Runs database migrations automatically
+  - Waits for health checks before completing
+
+- **`make seed [SUBDIR=name]`** - Generates realistic test data
+  - Reads Prisma schema to understand models
+  - Creates 30 users with 5-10 tasks each (configurable)
+  - Uses Faker.js for realistic data
+  - Idempotent (safe to run multiple times)
+
+- **`make config [SUBDIR=name]`** - Interactive configuration wizard
+  - Prompts for project name, GCP project ID, region
+  - Generates complete `config.yaml` with defaults
+  - Won't overwrite existing config without permission
+
+- **`make deploy [SUBDIR=name]`** - Deploys to GKE
+  - Provisions GKE cluster (or reuses existing)
+  - Builds production Docker images
+  - Deploys all services to Kubernetes
+  - Creates LoadBalancer for frontend
+  - Automatically commits and pushes code to GitHub
+  - Runs seed script automatically
+
+- **`make destroy [SUBDIR=name]`** - Cleanup all resources
+  - Prompts for confirmation
+  - Removes Kubernetes resources
+  - Optionally destroys GKE cluster
+  - Displays cost savings estimate
 
 ---
 
@@ -286,7 +322,62 @@ gke:
 
 ---
 
+## Deployment Modes
+
+### HTTP LoadBalancer Mode (Faster, Recommended for Demos)
+
+For faster deployment (2-5 minutes vs 10-20 minutes), comment out `domain_name` in `config.yaml`:
+
+```yaml
+gke:
+  project_id: "your-gcp-project-id"
+  region: us-central1
+  # domain_name: "your-domain.com"  # Commented = HTTP LoadBalancer mode
+```
+
+**Benefits:**
+- Faster deployment (no Ingress waiting)
+- No DNS configuration required
+- No SSL certificate provisioning delays
+- Perfect for development and testing
+
+### HTTPS Mode (Production)
+
+For production deployments with custom domain:
+
+```yaml
+gke:
+  project_id: "your-gcp-project-id"
+  region: us-central1
+  domain_name: "your-domain.com"  # Active = HTTPS mode
+```
+
+**Note:** Requires DNS configuration and SSL certificate provisioning (~10-20 minutes).
+
+---
+
+## Example Task App
+
+Try the complete example application:
+
+```bash
+make dev SUBDIR=example-task-app
+make seed SUBDIR=example-task-app
+```
+
+Then visit http://localhost:3000 and login with:
+- **Email**: `demo@example.com`
+- **Password**: `demo123`
+
+See `example-task-app/README.md` for more details.
+
+---
+
 ## Troubleshooting
+
+For common issues and solutions, see **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)**.
+
+**Quick fixes:**
 
 **Port conflicts?** The tool automatically frees ports 5432 and 6379 if they're in use by Docker containers. If you have a non-Docker service using these ports, stop it manually.
 
@@ -297,7 +388,9 @@ gke:
 docker-compose -f docker/docker-compose.yml logs -f
 ```
 
-**Need help?** Check `docs/` folder or open an issue.
+**GKE deployment issues?** See `PRE_DEPLOYMENT_CHECKLIST.md` for GCP setup requirements.
+
+**Need more help?** Check `docs/` folder or open an issue.
 
 ---
 
@@ -313,19 +406,30 @@ docker-compose -f docker/docker-compose.yml logs -f
 
 ### GKE (Production)
 - GKE cluster (auto-provisioned or reused)
-- Frontend LoadBalancer (public IP)
+- Frontend LoadBalancer (public IP) with nginx API proxy
 - Backend ClusterIP (internal only)
-- PostgreSQL StatefulSet with persistent storage
+- PostgreSQL StatefulSet with persistent storage (10Gi)
 - Redis deployment
 - All secrets from `.env.production` or `.env`
+- Automatic GitHub repository creation and code push
+- Dynamic Kubernetes namespace (based on project name)
+- Seed script runs automatically during deployment
 
 ---
 
 ## Cost Estimates
 
-**GKE Deployment** (default config):
-- ~$71/month (2 x e2-medium nodes + LoadBalancer)
+**GKE Deployment** (default configuration):
+- **Cluster Management**: Free (GKE managed control plane)
+- **Compute** (2 x e2-medium nodes): ~$48/month
+- **Load Balancer**: ~$18/month
+- **Persistent Disk** (10GB): ~$2/month
+- **Estimated Total**: ~$68-73/month
+
+**Cost Optimization:**
 - Run `make destroy` when not needed to avoid costs
+- Use HTTP LoadBalancer mode (faster, no Ingress costs)
+- Consider preemptible nodes for dev/staging (50% savings)
 
 ---
 

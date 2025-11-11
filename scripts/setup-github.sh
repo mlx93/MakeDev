@@ -167,7 +167,9 @@ else
     if ! git diff-index --quiet HEAD --; then
         echo "   📝 Uncommitted changes detected. Committing..."
         git add -A
-        git commit -m "Update before GitHub deployment" || true
+        git commit -m "Update: $(date +'%Y-%m-%d %H:%M:%S')
+
+Auto-committed during deployment" || true
     fi
 fi
 
@@ -182,6 +184,36 @@ echo ""
 if gh repo view "$PROJECT_NAME" &> /dev/null; then
     echo "✅ Repository already exists on GitHub: $PROJECT_NAME"
     REPO_URL=$(gh repo view "$PROJECT_NAME" --json url -q .url)
+    
+    # Ensure remote is set
+    cd "$PROJECT_ROOT"
+    if ! git remote get-url origin &> /dev/null; then
+        echo "   Setting remote origin..."
+        git remote add origin "$REPO_URL" 2>/dev/null || \
+        git remote set-url origin "$REPO_URL" 2>/dev/null || true
+    fi
+    
+    # Check if there are unpushed commits (changes were already committed above)
+    cd "$PROJECT_ROOT"
+    CURRENT_BRANCH=$(git branch --show-current || echo "main")
+    HAS_UNPUSHED=$(git rev-list --count origin/$CURRENT_BRANCH..HEAD 2>/dev/null 2>&1 || echo "0")
+    
+    # Handle case where remote branch doesn't exist yet
+    if ! git rev-parse --verify "origin/$CURRENT_BRANCH" &>/dev/null; then
+        HAS_UNPUSHED="1"  # Treat as unpushed if branch doesn't exist on remote
+    fi
+    
+    if [ "$HAS_UNPUSHED" != "0" ] && [ "$HAS_UNPUSHED" != "" ]; then
+        echo "   📤 Pushing changes to GitHub..."
+        git push origin "$CURRENT_BRANCH" 2>/dev/null || \
+        git push -u origin "$CURRENT_BRANCH" 2>/dev/null || {
+            echo "   ⚠️  Could not push to remote (non-blocking)"
+            echo "   You can manually push with: git push origin $CURRENT_BRANCH"
+        }
+        echo "   ✅ Changes pushed to GitHub"
+    else
+        echo "   ✅ Repository is up to date (no changes to push)"
+    fi
 else
     # Create new private repository
     echo "   Creating private repository..."

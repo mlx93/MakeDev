@@ -52,9 +52,27 @@ FROM nginx:alpine AS prod
 # Copy built assets from build stage
 COPY --from=build /app/frontend/dist /usr/share/nginx/html
 
-# Copy nginx configuration (if needed for SPA routing)
+# Copy nginx configuration with API proxy
+# Backend service URL will be injected via environment variable at runtime
 RUN echo 'server { \
     listen 3000; \
+    \
+    # Proxy API requests to backend service \
+    # Rewrite /api/* to /api/v1/* to match backend routes \
+    location /api { \
+        rewrite ^/api/(.*)$ /api/v1/$1 break; \
+        proxy_pass http://backend-service:8080; \
+        proxy_http_version 1.1; \
+        proxy_set_header Upgrade $http_upgrade; \
+        proxy_set_header Connection "upgrade"; \
+        proxy_set_header Host $host; \
+        proxy_set_header X-Real-IP $remote_addr; \
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
+        proxy_set_header X-Forwarded-Proto $scheme; \
+        proxy_cache_bypass $http_upgrade; \
+    } \
+    \
+    # Serve static files and handle SPA routing \
     location / { \
         root /usr/share/nginx/html; \
         index index.html; \

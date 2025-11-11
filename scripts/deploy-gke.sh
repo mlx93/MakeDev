@@ -91,7 +91,8 @@ CLUSTER_NAME=$(grep "cluster_name:" "$PROJECT_ROOT/config.yaml" | awk -F': ' '{p
 MACHINE_TYPE=$(grep "machine_type:" "$PROJECT_ROOT/config.yaml" | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
 NODE_COUNT=$(grep "node_count:" "$PROJECT_ROOT/config.yaml" | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
 DISK_SIZE_GB=$(grep "disk_size_gb:" "$PROJECT_ROOT/config.yaml" | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
-DOMAIN_NAME=$(grep "domain_name:" "$PROJECT_ROOT/config.yaml" | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
+# Extract domain_name, ignoring commented lines (lines starting with # or whitespace + #)
+DOMAIN_NAME=$(grep "domain_name:" "$PROJECT_ROOT/config.yaml" | grep -v "^[[:space:]]*#" | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
 
 # Auto-update machine_type to ARM64 ONLY if creating NEW cluster
 # If cluster already exists, we'll detect its architecture and build for that
