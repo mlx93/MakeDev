@@ -21,7 +21,7 @@
 
 **Command:**
 ```bash
-git clone https://github.com/yourusername/zero-to-running-dev-env.git MakeDev
+git clone https://github.com/mlx93/MakeDev.git MakeDev
 cd MakeDev
 ```
 
@@ -115,7 +115,7 @@ make deploy SUBDIR=example-hello-app
 **Command:**
 ```bash
 cd MakeDev
-git clone https://github.com/yourusername/example-task-app.git task-app
+git clone https://github.com/mlx93/task-app.git task-app
 ```
 
 **Voice-Over:**

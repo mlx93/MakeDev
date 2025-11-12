@@ -214,10 +214,37 @@ fi
 
 echo ""
 
-# Create GitHub repository
-echo "📦 Creating GitHub repository..."
-echo "   Repository name: $PROJECT_NAME"
-echo ""
+# Determine GitHub repository name/URL
+# If GIT_REPO is already set, extract repo name from URL, otherwise use PROJECT_NAME
+if [ -n "$GIT_REPO" ] && [ "$GIT_REPO" != '""' ] && [ "$GIT_REPO" != "" ]; then
+    # Extract repo name from URL (e.g., https://github.com/user/repo.git -> repo)
+    REPO_NAME=$(echo "$GIT_REPO" | sed -E 's|.*github\.com/[^/]+/([^/]+)(\.git)?/?$|\1|' | sed 's|\.git$||')
+    REPO_URL="$GIT_REPO"
+    echo "📦 Using existing GitHub repository from config.yaml..."
+    echo "   Repository: $REPO_NAME"
+    echo "   URL: $REPO_URL"
+    echo ""
+    
+    # Ensure remote is set to the URL from config.yaml
+    cd "$PROJECT_ROOT"
+    if [ -d "$PROJECT_ROOT/.git" ]; then
+        CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo "")
+        if [ "$CURRENT_REMOTE" != "$REPO_URL" ]; then
+            echo "   Setting remote origin to: $REPO_URL"
+            if [ -n "$CURRENT_REMOTE" ]; then
+                git remote set-url origin "$REPO_URL" 2>/dev/null || true
+            else
+                git remote add origin "$REPO_URL" 2>/dev/null || true
+            fi
+        fi
+    fi
+else
+    # No GIT_REPO set, use PROJECT_NAME to create/find repo
+    REPO_NAME="$PROJECT_NAME"
+    echo "📦 Creating GitHub repository..."
+    echo "   Repository name: $REPO_NAME"
+    echo ""
+fi
 
 # If repo already has remote, ensure we commit and push changes
 if [ "$HAS_REMOTE" = true ]; then
@@ -278,10 +305,40 @@ Auto-committed during deployment" 2>&1 | grep -E "^\[|files changed" || true
     return 0 2>/dev/null || exit 0
 fi
 
-# Create GitHub repository if it doesn't exist
-if gh repo view "$PROJECT_NAME" &> /dev/null; then
-    echo "✅ Repository already exists on GitHub: $PROJECT_NAME"
-    REPO_URL=$(gh repo view "$PROJECT_NAME" --json url -q .url)
+# If GIT_REPO was already set, we're done (repo exists and is connected)
+if [ -n "$GIT_REPO" ] && [ "$GIT_REPO" != '""' ] && [ "$GIT_REPO" != "" ]; then
+    # Just ensure changes are committed and pushed
+    cd "$PROJECT_ROOT"
+    CURRENT_BRANCH=$(git branch --show-current || echo "main")
+    HAS_UNPUSHED=$(git rev-list --count origin/$CURRENT_BRANCH..HEAD 2>/dev/null 2>&1 || echo "0")
+    
+    if ! git rev-parse --verify "origin/$CURRENT_BRANCH" &>/dev/null; then
+        HAS_UNPUSHED="1"
+    fi
+    
+    if [ "$HAS_UNPUSHED" != "0" ] && [ "$HAS_UNPUSHED" != "" ]; then
+        echo "   📤 Pushing changes to GitHub..."
+        git push origin "$CURRENT_BRANCH" 2>/dev/null || \
+        git push -u origin "$CURRENT_BRANCH" 2>/dev/null || {
+            echo "   ⚠️  Could not push to remote (non-blocking)"
+            echo "   You can manually push with: git push origin $CURRENT_BRANCH"
+        }
+        echo "   ✅ Changes pushed to GitHub"
+    else
+        echo "   ✅ Repository is up to date (no changes to push)"
+    fi
+    
+    echo ""
+    echo "✅ GitHub setup complete!"
+    echo "   Repository: $REPO_URL"
+    echo ""
+    exit 0
+fi
+
+# Create GitHub repository if it doesn't exist (only if GIT_REPO was not set)
+if gh repo view "$REPO_NAME" &> /dev/null; then
+    echo "✅ Repository already exists on GitHub: $REPO_NAME"
+    REPO_URL=$(gh repo view "$REPO_NAME" --json url -q .url)
     
     # Ensure remote is set
     cd "$PROJECT_ROOT"
@@ -315,12 +372,12 @@ if gh repo view "$PROJECT_NAME" &> /dev/null; then
 else
     # Create new private repository
     echo "   Creating private repository..."
-    gh repo create "$PROJECT_NAME" --private --source=. --remote=origin --push || {
+    gh repo create "$REPO_NAME" --private --source=. --remote=origin --push || {
         echo "❌ Failed to create repository"
         echo ""
         echo "Manual steps:"
         echo "  1. Go to https://github.com/new"
-        echo "  2. Create repository: $PROJECT_NAME"
+        echo "  2. Create repository: $REPO_NAME"
         echo "  3. Don't initialize with README"
         echo "  4. Run: git remote add origin <repo-url>"
         echo "  5. Run: git push -u origin main"
@@ -328,7 +385,7 @@ else
         exit 1
     }
     
-    REPO_URL=$(gh repo view "$PROJECT_NAME" --json url -q .url)
+    REPO_URL=$(gh repo view "$REPO_NAME" --json url -q .url)
     echo "   ✅ Repository created: $REPO_URL"
 fi
 

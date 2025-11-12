@@ -114,16 +114,8 @@ seed: ## Generate fake data from Prisma schema
 deploy: ## Deploy to Google Kubernetes Engine
 	@if [ -n "$(SUBDIR)" ]; then \
 		cd "$(SUBDIR)" && \
-		if [ ! -f "config.yaml" ]; then \
-			echo "❌ Error: config.yaml not found in $(SUBDIR)"; \
-			exit 1; \
-		fi && \
 		bash ../scripts/deploy-gke.sh; \
 	else \
-		if [ ! -f "config.yaml" ]; then \
-			echo "❌ Error: config.yaml not found. Please create it from config.yaml.example"; \
-			exit 1; \
-		fi && \
 		bash scripts/deploy-gke.sh; \
 	fi
 

@@ -138,35 +138,14 @@ echo "📋 Reading configuration..."
 IS_MAC=false
 if [ "$(uname -s)" = "Darwin" ]; then
     IS_MAC=true
-    echo "   🍎 Detected macOS - will use ARM64-compatible settings"
+    echo "   🍎 Detected macOS"
 fi
 
-# Auto-update machine_type to ARM64 ONLY if creating NEW cluster
-# If cluster already exists, we'll detect its architecture and build for that
-# This prevents auto-updating config when cluster architecture doesn't match
+# Check if cluster exists to determine build platform
 CLUSTER_EXISTS_CHECK=$(gcloud container clusters describe "$CLUSTER_NAME" \
     --region="$GCP_REGION" \
     --project="$GCP_PROJECT_ID" \
     --format="value(name)" 2>/dev/null || echo "")
-
-if [ "$IS_MAC" = true ] && ! echo "$MACHINE_TYPE" | grep -q "^t2a-" && [ -z "$CLUSTER_EXISTS_CHECK" ]; then
-    # Only auto-update to ARM64 if cluster doesn't exist yet (new cluster)
-    echo "   🔄 Auto-updating machine_type to ARM64 (t2a-standard-2) for macOS compatibility..."
-    echo "   ℹ️  (Only applies to NEW clusters - existing clusters use their current architecture)"
-    # Update config.yaml with ARM64 machine type
-    if grep -q "machine_type:" "$PROJECT_ROOT/config.yaml"; then
-        # Use sed to update machine_type (works on both macOS and Linux)
-        if [ "$(uname -s)" = "Darwin" ]; then
-            sed -i '' "s|machine_type:.*|machine_type: t2a-standard-2|g" "$PROJECT_ROOT/config.yaml"
-        else
-            sed -i "s|machine_type:.*|machine_type: t2a-standard-2|g" "$PROJECT_ROOT/config.yaml"
-        fi
-        MACHINE_TYPE="t2a-standard-2"
-        echo "   ✅ Updated config.yaml: machine_type = t2a-standard-2"
-    fi
-elif [ "$IS_MAC" = true ] && [ -n "$CLUSTER_EXISTS_CHECK" ]; then
-    echo "   ℹ️  Existing cluster detected - will build for cluster's architecture (not config machine_type)"
-fi
 
 # Validate required values
 if [ -z "$PROJECT_NAME" ]; then
@@ -180,7 +159,7 @@ fi
 GCP_REGION=${GCP_REGION:-us-east1}
 CLUSTER_NAME=${CLUSTER_NAME:-${PROJECT_NAME}-cluster}
 MACHINE_TYPE=${MACHINE_TYPE:-e2-medium}
-NODE_COUNT=${NODE_COUNT:-2}
+NODE_COUNT=${NODE_COUNT:-1}
 DISK_SIZE_GB=${DISK_SIZE_GB:-20}
 
 echo "   Project: $PROJECT_NAME"

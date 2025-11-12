@@ -22,22 +22,33 @@ elif [ -f "$PROJECT_ROOT/.env" ]; then
 else
     echo "⚠️  No .env or .env.production file found"
     echo "   Using default configuration (postgres/postgres credentials)"
-    echo "   For production, create .env.production with secure passwords"
+    echo "   Generating secure JWT_SECRET automatically..."
     echo ""
+    
+    # Generate a secure random JWT_SECRET (32 bytes, base64 encoded = 44 characters)
+    if command -v openssl &> /dev/null; then
+        JWT_SECRET=$(openssl rand -base64 32 | tr -d '\n')
+    elif command -v head &> /dev/null && [ -c /dev/urandom ]; then
+        JWT_SECRET=$(head -c 32 /dev/urandom | base64 | tr -d '\n')
+    else
+        # Fallback: use date + random number (less secure but better than placeholder)
+        JWT_SECRET="jwt-secret-$(date +%s)-$(shuf -i 1000-9999 -n 1)-$(openssl rand -hex 16 2>/dev/null || echo $RANDOM)"
+    fi
     
     # Create minimal defaults
     ENV_FILE="/tmp/default_env_$$"
-    cat > "$ENV_FILE" << 'EOF'
+    cat > "$ENV_FILE" << EOF
 DATABASE_URL=postgresql://postgres:postgres@postgres-service:5432/appdb
 DATABASE_USER=postgres
 DATABASE_PASSWORD=postgres
 DATABASE_NAME=appdb
 REDIS_URL=redis://redis-service:6379
-JWT_SECRET=change-this-in-production
+JWT_SECRET=$JWT_SECRET
 NODE_ENV=production
 API_PORT=8080
 EOF
-    echo "   ✅ Using default configuration"
+    echo "   ✅ Using default configuration with auto-generated JWT_SECRET"
+    echo "   ⚠️  For production, create .env.production with secure passwords"
     echo ""
 fi
 

@@ -68,9 +68,11 @@ gke:
     # See: https://cloud.google.com/compute/docs/machine-types
     machine_type: "e2-medium"
     
-    # Number of nodes in the cluster (default: 2)
-    # Minimum: 1, Recommended: 2-3 for high availability
-    node_count: 2
+    # Number of nodes in the cluster (default: 1)
+    # Note: For regional clusters, nodes are distributed across zones
+    # Setting to 1 will create 1 node per zone (3 nodes total in us-east1)
+    # Minimum: 1, Recommended: 1-2 for cost efficiency
+    node_count: 1
     
     # Disk size per node in GB (default: 20)
     disk_size_gb: 20

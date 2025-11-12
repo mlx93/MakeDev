@@ -100,7 +100,7 @@ if [[ "$use_defaults" =~ ^[Yy]$ ]] || [ -z "$use_defaults" ]; then
     gcp_region="us-east1"
     cluster_name=""  # Will be auto-generated as ${project_name}-cluster
     machine_type="e2-medium"
-    node_count=2
+    node_count=1
     domain_name=""
     
     echo ""
@@ -139,8 +139,8 @@ else
     read -p "Enter machine type [e2-medium]: " machine_type
     machine_type=${machine_type:-e2-medium}
     
-    read -p "Enter number of nodes [2]: " node_count
-    node_count=${node_count:-2}
+    read -p "Enter number of nodes [1]: " node_count
+    node_count=${node_count:-1}
     
     echo ""
     echo "🌐 Domain Name (Optional - for HTTPS)"
