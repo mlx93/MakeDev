@@ -52,9 +52,9 @@ gke:
   # Find your project ID: https://console.cloud.google.com/
   project_id: "your-gcp-project-id"
   
-  # GCP region (default: us-central1)
-  # Common regions: us-central1, us-east1, europe-west1, asia-southeast1
-  region: "us-central1"
+  # GCP region (default: us-east1)
+  # Common regions: us-east1, us-central1, us-west1, europe-west1, asia-southeast1
+  region: "us-east1"
   
   # GKE cluster name (default: auto-generated from project name)
   # If empty, will be generated as: <project_name>-cluster

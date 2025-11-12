@@ -24,7 +24,7 @@ GCP_PROJECT_ID=$(grep "project_id:" "$PROJECT_ROOT/config.yaml" | sed 's/.*proje
 GCP_REGION=$(grep "region:" "$PROJECT_ROOT/config.yaml" | sed 's/.*region:[[:space:]]*"\?\([^"]*\)"\?.*/\1/' | tr -d ' ')
 CLUSTER_NAME=$(grep "cluster_name:" "$PROJECT_ROOT/config.yaml" | sed 's/.*cluster_name:[[:space:]]*"\?\([^"]*\)"\?.*/\1/' | tr -d ' ')
 
-GCP_REGION=${GCP_REGION:-us-central1}
+GCP_REGION=${GCP_REGION:-us-east1}
 CLUSTER_NAME=${CLUSTER_NAME:-${PROJECT_NAME}-cluster}
 
 echo "Configuration:"

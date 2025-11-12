@@ -75,16 +75,7 @@ fi
 echo "✅ Configuration file found"
 echo ""
 
-echo "📋 Reading configuration..."
-
-# Detect if running on macOS (ARM64 Mac)
-IS_MAC=false
-if [ "$(uname -s)" = "Darwin" ]; then
-    IS_MAC=true
-    echo "   🍎 Detected macOS - will use ARM64-compatible settings"
-fi
-
-# Extract configuration values using awk for reliable YAML parsing
+# Extract configuration values using awk for reliable YAML parsing (read before displaying)
 PROJECT_NAME=$(grep "name:" "$PROJECT_ROOT/config.yaml" | head -1 | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
 GCP_PROJECT_ID=$(grep "project_id:" "$PROJECT_ROOT/config.yaml" | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
 GCP_REGION=$(grep "region:" "$PROJECT_ROOT/config.yaml" | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
@@ -96,8 +87,23 @@ DISK_SIZE_GB=$(grep "disk_size_gb:" "$PROJECT_ROOT/config.yaml" | awk -F': ' '{p
 DOMAIN_NAME=$(grep "domain_name:" "$PROJECT_ROOT/config.yaml" | grep -v "^[[:space:]]*#" | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
 
 # Check if GCP project_id is missing or contains placeholder value
+# Also check if region is using old default (us-central1) and should be updated to new default (us-east1)
+NEEDS_CONFIG_UPDATE=false
 if [ -z "$GCP_PROJECT_ID" ] || [ "$GCP_PROJECT_ID" = "your-gcp-project-id" ]; then
-    echo "⚠️  GCP project_id is missing or contains placeholder value"
+    NEEDS_CONFIG_UPDATE=true
+elif [ "$GCP_REGION" = "us-central1" ]; then
+    # Region is using old default - offer to update to new default
+    NEEDS_CONFIG_UPDATE=true
+fi
+
+if [ "$NEEDS_CONFIG_UPDATE" = true ]; then
+    if [ -z "$GCP_PROJECT_ID" ] || [ "$GCP_PROJECT_ID" = "your-gcp-project-id" ]; then
+        echo "⚠️  GCP project_id is missing or contains placeholder value"
+    elif [ "$GCP_REGION" = "us-central1" ]; then
+        echo "⚠️  Region is set to old default (us-central1)"
+        echo "   The default region has been updated to us-east1 to avoid quota limits"
+        echo "   We'll update your config to use the new default (us-east1)"
+    fi
     echo ""
     echo "Let's configure your GCP deployment settings! (takes ~1 minute)"
     echo ""
@@ -124,6 +130,15 @@ if [ -z "$GCP_PROJECT_ID" ] || [ "$GCP_PROJECT_ID" = "your-gcp-project-id" ]; th
     echo ""
     echo "✅ GCP configuration complete, continuing with deployment..."
     echo ""
+fi
+
+echo "📋 Reading configuration..."
+
+# Detect if running on macOS (ARM64 Mac)
+IS_MAC=false
+if [ "$(uname -s)" = "Darwin" ]; then
+    IS_MAC=true
+    echo "   🍎 Detected macOS - will use ARM64-compatible settings"
 fi
 
 # Auto-update machine_type to ARM64 ONLY if creating NEW cluster
@@ -162,7 +177,7 @@ fi
 # GCP_PROJECT_ID validation is already handled above (before this point)
 
 # Set defaults
-GCP_REGION=${GCP_REGION:-us-central1}
+GCP_REGION=${GCP_REGION:-us-east1}
 CLUSTER_NAME=${CLUSTER_NAME:-${PROJECT_NAME}-cluster}
 MACHINE_TYPE=${MACHINE_TYPE:-e2-medium}
 NODE_COUNT=${NODE_COUNT:-2}

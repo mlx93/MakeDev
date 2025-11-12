@@ -71,11 +71,12 @@ make dev SUBDIR=hello-world-app
 🔧 Creating new project in subdirectory: hello-world-app
    Creating Makefile (include ../Makefile)
    Bootstrapping tool infrastructure...
-   Setting git_repo to empty (greenfield scaffold)
+   Creating minimal config.yaml for local development...
+   ✅ Created minimal config.yaml (GCP settings will be prompted during deployment)
 ```
 
 **Voice-Over:**
-*"MakeDev is automatically creating the project structure and a minimal config.yaml file. Notice it's setting git_repo to empty, which tells MakeDev this is a greenfield project that should be scaffolded from scratch. The config.yaml only has what we need for local development—no GCP settings required yet."*
+*"MakeDev is automatically creating the project structure and a minimal config.yaml file. Notice it's creating a minimal config with just the project name, service paths, ports, cache settings, and seed configuration—everything we need for local development. No GCP settings are included, which means we don't have to worry about placeholder values or configuration burden until we're ready to deploy. The config.yaml will be automatically upgraded with GCP settings when we run `make deploy`."*
 
 ---
 
@@ -85,7 +86,7 @@ make dev SUBDIR=hello-world-app
 *"Watch this—MakeDev is automatically creating our project structure. It's generating a React frontend with Vite, a Node.js backend with Express, setting up TypeScript, Tailwind CSS, and Prisma for database access. All of this happens automatically—no manual setup required."*
 
 **Commentary Point 2 - Docker Build (2:00-2:30):**
-*"Now MakeDev is building Docker containers for our application. It's creating optimized images for both the frontend and backend services. This ensures our application will run consistently whether it's on my machine or in production."*
+*"Now MakeDev is building Docker containers for local development. It's creating development images with hot reload enabled—the backend uses TypeScript with live reload, and the frontend uses Vite's dev server. These are development-optimized images designed for fast iteration. When we deploy to production later, MakeDev will build production-optimized images instead."*
 
 **Commentary Point 3 - Services Starting (2:30-3:00):**
 *"The services are starting up now. PostgreSQL database is initializing, Redis cache is starting, and our backend API is coming online. Notice how MakeDev handles all the service dependencies automatically—the database starts before the backend, and the backend starts before the frontend."*
@@ -126,35 +127,35 @@ curl http://localhost:8080/api/v1/health
 ### [4:00-8:00] Deploy Hello World App to GKE
 
 **Voice-Over:**
-*"Now comes the exciting part—deploying to production. With MakeDev, this is just one command: `make deploy`. Since our config.yaml doesn't have GCP settings yet, MakeDev will detect that and prompt us interactively for our GCP project ID. After entering it, this single command will provision a GKE cluster, build production Docker images, push them to Google Artifact Registry, deploy to Kubernetes, and configure everything we need for production."*
-
-**Note for Demo:** Currently, if config.yaml exists with placeholder project_id, `make deploy` will error. For smooth demo flow:
-- Option 1 (Recommended): Delete `hello-world-app/config.yaml` before running `make deploy` to trigger interactive prompt
-- Option 2: Manually edit `hello-world-app/config.yaml` to set `project_id: "your-actual-project-id"` before running `make deploy`
+*"Now comes the exciting part—deploying to production. With MakeDev, this is just one command: `make deploy`. Since our config.yaml was created with minimal settings for local development, MakeDev will automatically detect that GCP settings are missing and prompt us interactively for our GCP project ID. After entering it, we can accept all default settings with a single 'Y', and this single command will provision a GKE cluster, build production Docker images, push them to Google Artifact Registry, deploy to Kubernetes, and configure everything we need for production."*
 
 **Command:**
 ```bash
 make deploy SUBDIR=hello-world-app
 ```
 
-**Expected Output (Interactive Config Prompt - if config.yaml is missing or GCP settings incomplete):**
+**Expected Output (Interactive Config Prompt - GCP settings detected as missing):**
 ```
-⚠️  config.yaml not found in hello-world-app
-Let's create one! (takes ~1 minute)
+⚠️  GCP project_id is missing or contains placeholder value
+
+Let's configure your GCP deployment settings! (takes ~1 minute)
 
 ⚙️  Zero-to-Running Config Generator
 ==========================================
 
+✅ Found existing config.yaml with project name: hello-world-app
+   Updating GCP deployment settings...
+
 📦 Project Configuration
 ──────────────────────────────────────────
 
-Enter your project name (e.g., my-app, task-tracker): hello-world-app
+✅ Found existing project name: hello-world-app
 
 🔗 GitHub Configuration
 ──────────────────────────────────────────
 
 We'll create a GitHub repository for you during deployment.
-Enter desired GitHub repo name (default: hello-world-app): [press Enter]
+Enter desired GitHub repo name [hello-world-app]: [press Enter]
 
 ☁️  Google Cloud Platform (GKE) Configuration
 ──────────────────────────────────────────
@@ -165,15 +166,26 @@ To find your GCP project ID:
   3. Copy the Project ID (not the name)
 
 Enter your GCP project ID: [enter your GCP project ID]
+
+Use all default settings for region, cluster name, machine type, etc.? (Y/n): [press Enter or Y]
+
+✅ Using default settings:
+──────────────────────────────────────────
+  Region:           us-central1
+  Cluster Name:     hello-world-app-cluster (auto-generated)
+  Machine Type:     e2-medium
+  Node Count:       2
+  Domain:           (none - HTTP mode)
+──────────────────────────────────────────
 ```
 
 **Voice-Over:**
-*"MakeDev detected that we need GCP configuration for deployment, so it's prompting us interactively. I'll enter my GCP project ID, and it will create a complete config.yaml file with all the settings we need."*
+*"MakeDev detected that our config.yaml has the project name but is missing GCP settings for deployment. It's prompting us interactively. I'll enter my GCP project ID, and when it asks if I want to use all default settings, I'll just press Enter to accept. This gives us a quick path to deployment with sensible defaults, and we can see exactly what settings were applied in the summary table."*
 
 **Expected Output (Key Moments for Commentary - After Config):**
 
 **Commentary Point 5 - Configuration Complete (4:00-4:15):**
-*"Configuration is complete. MakeDev has created our config.yaml file with all the settings we need. Now it's ready to deploy."*
+*"Configuration is complete. MakeDev has updated our config.yaml file with GCP settings. Notice how it preserved our project name and just added the deployment settings we need. The summary shows all the default settings that were applied—we can see exactly what will be used for our deployment. Now it's ready to deploy."*
 
 **Commentary Point 6 - GitHub Setup (4:15-4:45):**
 *"First, MakeDev is setting up our GitHub repository. It's automatically creating the repo, connecting it to our local code, and pushing our code to GitHub. All of this happens automatically—no manual git commands needed."*
@@ -253,7 +265,7 @@ make dev SUBDIR=task-app
 - Health checks passing
 
 **Commentary Point 12 - Existing Repo Detection (8:00-8:30):**
-*"MakeDev detected this is an existing repository, so it's not scaffolding—it's using the existing code. It's still setting up Docker containers, starting services, and running database migrations automatically."*
+*"MakeDev detected this is an existing repository, so it's not scaffolding—it's using the existing code. It's still setting up Docker containers with development images for hot reload, starting services, and running database migrations automatically."*
 
 **Commentary Point 13 - Migrations Running (8:30-9:00):**
 *"Prisma migrations are running automatically. MakeDev detected the Prisma schema and is applying all migrations. The database is being set up with the correct schema—User and Task tables, relationships, indexes—all automatically."*
@@ -361,8 +373,8 @@ Demo credentials:
 - [ ] Clone MakeDev repo
 - [ ] Run `make dev SUBDIR=hello-world-app` (auto-creates minimal config.yaml with project name only, no GCP settings)
 - [ ] Show app in browser (localhost:3000)
-- [ ] Delete `hello-world-app/config.yaml` (to trigger interactive prompt during deploy) OR edit it to add GCP project_id
-- [ ] Run `make deploy SUBDIR=hello-world-app` (will prompt for GCP project ID interactively)
+- [ ] Run `make deploy SUBDIR=hello-world-app` (will automatically detect missing GCP settings and prompt interactively)
+- [ ] When prompted, enter GCP project ID and accept defaults (press Enter)
 - [ ] Show app in browser (production URL)
 
 ### Recording Part 2 (Task App)

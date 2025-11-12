@@ -97,7 +97,7 @@ use_defaults=${use_defaults:-Y}
 
 if [[ "$use_defaults" =~ ^[Yy]$ ]] || [ -z "$use_defaults" ]; then
     # Use all defaults
-    gcp_region="us-central1"
+    gcp_region="us-east1"
     cluster_name=""  # Will be auto-generated as ${project_name}-cluster
     machine_type="e2-medium"
     node_count=2
@@ -120,14 +120,14 @@ else
     echo "──────────────────────────────────────────"
     echo ""
     echo "Common regions:"
-    echo "  • us-central1 (Iowa) - Default, good latency for US"
-    echo "  • us-east1 (South Carolina)"
+    echo "  • us-east1 (South Carolina) - Default, good latency for US"
+    echo "  • us-central1 (Iowa)"
     echo "  • us-west1 (Oregon)"
     echo "  • europe-west1 (Belgium)"
     echo "  • asia-southeast1 (Singapore)"
     echo ""
-    read -p "Enter GCP region [us-central1]: " gcp_region
-    gcp_region=${gcp_region:-us-central1}
+    read -p "Enter GCP region [us-east1]: " gcp_region
+    gcp_region=${gcp_region:-us-east1}
     
     echo ""
     echo "⚙️  Advanced Configuration (Optional)"

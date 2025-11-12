@@ -46,6 +46,7 @@ temp/
 my-test-app/
 test-app/
 
-# Example Task App (separate repository)
+# Example projects (separate repositories or generated projects)
 example-task-app/
+example-hello-app/
 
