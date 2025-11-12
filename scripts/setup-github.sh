@@ -18,8 +18,18 @@ if [ ! -f "$PROJECT_ROOT/config.yaml" ]; then
 fi
 
 # Extract project name and git_repo from config.yaml using awk
-PROJECT_NAME=$(grep "name:" "$PROJECT_ROOT/config.yaml" | head -1 | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
-GIT_REPO=$(grep "git_repo:" "$PROJECT_ROOT/config.yaml" | head -1 | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
+# Strip inline comments before parsing, then extract value
+PROJECT_NAME=$(grep "^[[:space:]]*name:" "$PROJECT_ROOT/config.yaml" | head -1 | sed 's/#.*$//' | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
+
+# For git_repo, strip comments first, then extract value, handling empty strings properly
+# Match git_repo line, strip comments, extract quoted or unquoted value
+GIT_REPO_LINE=$(grep "^[[:space:]]*git_repo:" "$PROJECT_ROOT/config.yaml" | head -1 | sed 's/#.*$//')
+GIT_REPO=$(echo "$GIT_REPO_LINE" | awk -F': ' '{print $2}' | sed -E 's/^["'\'']?([^"'\'']*)["'\'']?.*$/\1/' | tr -d ' ')
+
+# If GIT_REPO is empty, contains only quotes, or matches comment-like text, treat it as unset
+if [ -z "$GIT_REPO" ] || [ "$GIT_REPO" = '""' ] || [ "$GIT_REPO" = "''" ] || echo "$GIT_REPO" | grep -q "^#"; then
+    GIT_REPO=""
+fi
 
 echo "   Project directory: $PROJECT_ROOT"
 echo "   Project name: $PROJECT_NAME"
@@ -215,8 +225,9 @@ fi
 echo ""
 
 # Determine GitHub repository name/URL
-# If GIT_REPO is already set, extract repo name from URL, otherwise use PROJECT_NAME
-if [ -n "$GIT_REPO" ] && [ "$GIT_REPO" != '""' ] && [ "$GIT_REPO" != "" ]; then
+# If GIT_REPO is already set (and is a valid URL), extract repo name from URL, otherwise use PROJECT_NAME
+# Debug: Show what we parsed (can be removed in production)
+if [ -n "$GIT_REPO" ] && [ "$GIT_REPO" != '""' ] && [ "$GIT_REPO" != "" ] && echo "$GIT_REPO" | grep -qE "^https?://|^git@"; then
     # Extract repo name from URL (e.g., https://github.com/user/repo.git -> repo)
     REPO_NAME=$(echo "$GIT_REPO" | sed -E 's|.*github\.com/[^/]+/([^/]+)(\.git)?/?$|\1|' | sed 's|\.git$||')
     REPO_URL="$GIT_REPO"

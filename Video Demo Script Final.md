@@ -13,6 +13,9 @@
 - GitHub CLI authenticated
 - Terminal ready, browser ready
 
+**Voice-Over:**
+*"I'm going to show you how to go from zero to a running application deployed on Google Kubernetes Engine in under 10 minutes. We'll start with absolutely nothing—no code, no project—just the MakeDev tool."*
+
 ---
 
 ## Part 1: Hello World App (2-3 minutes)
@@ -38,7 +41,7 @@ make dev SUBDIR=example-hello-app
 ```
 
 **Voice-Over (during scaffolding - 1:30-2:00):**
-*"Watch this—MakeDev is automatically creating our project structure. It's generating a React frontend with Vite, a Node.js backend with Express, setting up TypeScript, Tailwind CSS, and Prisma for database access. All of this happens automatically—no manual setup required."*
+*"Watch this—MakeDev is automatically creating our project structure. It's generating a React frontend, a Node.js backend with Express, setting up TypeScript, Tailwind CSS, and Prisma for database access. All of this happens automatically—no manual setup required."*
 
 **Voice-Over (during Docker build - 2:00-2:30):**
 *"Now MakeDev is building Docker containers for local development. It's creating development images with hot reload enabled—the backend uses TypeScript with live reload, and the frontend uses Vite's dev server. These are development-optimized images designed for fast iteration. When we deploy to production later, MakeDev will build production-optimized images instead."*
