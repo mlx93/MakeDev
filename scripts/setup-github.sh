@@ -278,22 +278,24 @@ Auto-committed during deployment" 2>&1 | grep -E "^\[|files changed" || true
     # Get current branch
     CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "main")
     
-    # Check if there are unpushed commits
-    HAS_UNPUSHED=$(git rev-list --count origin/$CURRENT_BRANCH..HEAD 2>/dev/null 2>&1 || echo "0")
-    
-    # Handle case where remote branch doesn't exist yet
-    if ! git rev-parse --verify "origin/$CURRENT_BRANCH" &>/dev/null 2>&1; then
-        HAS_UNPUSHED="1"  # Treat as unpushed if branch doesn't exist on remote
+    # Check if remote branch exists
+    if git rev-parse --verify "origin/$CURRENT_BRANCH" &>/dev/null 2>&1; then
+        # Remote branch exists - check if local is ahead
+        HAS_UNPUSHED=$(git rev-list --count origin/$CURRENT_BRANCH..HEAD 2>/dev/null || echo "0")
+    else
+        # Remote branch doesn't exist - we need to push
+        HAS_UNPUSHED="1"
     fi
     
-    if [ "$HAS_UNPUSHED" != "0" ] && [ "$HAS_UNPUSHED" != "" ]; then
+    # Only push if there are actually unpushed commits
+    if [ "$HAS_UNPUSHED" != "0" ] && [ "$HAS_UNPUSHED" != "" ] && [ "$HAS_UNPUSHED" -gt 0 ] 2>/dev/null; then
         echo "   📤 Pushing changes to GitHub..."
-        git push origin "$CURRENT_BRANCH" 2>/dev/null || \
-        git push -u origin "$CURRENT_BRANCH" 2>/dev/null || {
+        if git push origin "$CURRENT_BRANCH" 2>/dev/null || git push -u origin "$CURRENT_BRANCH" 2>/dev/null; then
+            echo "   ✅ Changes pushed to GitHub"
+        else
             echo "   ⚠️  Could not push to remote (non-blocking)"
             echo "   You can manually push with: git push origin $CURRENT_BRANCH"
-        }
-        echo "   ✅ Changes pushed to GitHub"
+        fi
     else
         echo "   ✅ Repository is up to date (no changes to push)"
     fi
@@ -309,21 +311,51 @@ fi
 if [ -n "$GIT_REPO" ] && [ "$GIT_REPO" != '""' ] && [ "$GIT_REPO" != "" ]; then
     # Just ensure changes are committed and pushed
     cd "$PROJECT_ROOT"
-    CURRENT_BRANCH=$(git branch --show-current || echo "main")
-    HAS_UNPUSHED=$(git rev-list --count origin/$CURRENT_BRANCH..HEAD 2>/dev/null 2>&1 || echo "0")
     
-    if ! git rev-parse --verify "origin/$CURRENT_BRANCH" &>/dev/null; then
+    # First, commit any uncommitted changes
+    if ! git diff-index --quiet HEAD -- 2>/dev/null; then
+        echo "   📝 Uncommitted changes detected. Committing..."
+        
+        # Remove node_modules from tracking if they exist
+        if git ls-files | grep -q "^.*node_modules/"; then
+            git rm -r --cached --quiet */node_modules 2>/dev/null || true
+        fi
+        
+        # Add changes quietly
+        git add -A --quiet 2>/dev/null || git add -A 2>&1 | grep -v "^delete mode" | grep -v "node_modules" | head -20 || true
+        
+        # Commit quietly
+        git commit -m "Update: $(date +'%Y-%m-%d %H:%M:%S')
+
+Auto-committed during deployment" --quiet 2>/dev/null || \
+        git commit -m "Update: $(date +'%Y-%m-%d %H:%M:%S')
+
+Auto-committed during deployment" 2>&1 | grep -E "^\[|files changed" || true
+        
+        echo "   ✅ Changes committed"
+    fi
+    
+    # Check for unpushed commits
+    CURRENT_BRANCH=$(git branch --show-current || echo "main")
+    
+    # Check if remote branch exists
+    if git rev-parse --verify "origin/$CURRENT_BRANCH" &>/dev/null 2>&1; then
+        # Remote branch exists - check if local is ahead
+        HAS_UNPUSHED=$(git rev-list --count origin/$CURRENT_BRANCH..HEAD 2>/dev/null || echo "0")
+    else
+        # Remote branch doesn't exist - we need to push
         HAS_UNPUSHED="1"
     fi
     
-    if [ "$HAS_UNPUSHED" != "0" ] && [ "$HAS_UNPUSHED" != "" ]; then
+    # Only push if there are actually unpushed commits
+    if [ "$HAS_UNPUSHED" != "0" ] && [ "$HAS_UNPUSHED" != "" ] && [ "$HAS_UNPUSHED" -gt 0 ] 2>/dev/null; then
         echo "   📤 Pushing changes to GitHub..."
-        git push origin "$CURRENT_BRANCH" 2>/dev/null || \
-        git push -u origin "$CURRENT_BRANCH" 2>/dev/null || {
+        if git push origin "$CURRENT_BRANCH" 2>/dev/null || git push -u origin "$CURRENT_BRANCH" 2>/dev/null; then
+            echo "   ✅ Changes pushed to GitHub"
+        else
             echo "   ⚠️  Could not push to remote (non-blocking)"
             echo "   You can manually push with: git push origin $CURRENT_BRANCH"
-        }
-        echo "   ✅ Changes pushed to GitHub"
+        fi
     else
         echo "   ✅ Repository is up to date (no changes to push)"
     fi
@@ -351,21 +383,25 @@ if gh repo view "$REPO_NAME" &> /dev/null; then
     # Check if there are unpushed commits (changes were already committed above)
     cd "$PROJECT_ROOT"
     CURRENT_BRANCH=$(git branch --show-current || echo "main")
-    HAS_UNPUSHED=$(git rev-list --count origin/$CURRENT_BRANCH..HEAD 2>/dev/null 2>&1 || echo "0")
     
-    # Handle case where remote branch doesn't exist yet
-    if ! git rev-parse --verify "origin/$CURRENT_BRANCH" &>/dev/null; then
-        HAS_UNPUSHED="1"  # Treat as unpushed if branch doesn't exist on remote
+    # Check if remote branch exists
+    if git rev-parse --verify "origin/$CURRENT_BRANCH" &>/dev/null 2>&1; then
+        # Remote branch exists - check if local is ahead
+        HAS_UNPUSHED=$(git rev-list --count origin/$CURRENT_BRANCH..HEAD 2>/dev/null || echo "0")
+    else
+        # Remote branch doesn't exist - we need to push
+        HAS_UNPUSHED="1"
     fi
     
-    if [ "$HAS_UNPUSHED" != "0" ] && [ "$HAS_UNPUSHED" != "" ]; then
+    # Only push if there are actually unpushed commits
+    if [ "$HAS_UNPUSHED" != "0" ] && [ "$HAS_UNPUSHED" != "" ] && [ "$HAS_UNPUSHED" -gt 0 ] 2>/dev/null; then
         echo "   📤 Pushing changes to GitHub..."
-        git push origin "$CURRENT_BRANCH" 2>/dev/null || \
-        git push -u origin "$CURRENT_BRANCH" 2>/dev/null || {
+        if git push origin "$CURRENT_BRANCH" 2>/dev/null || git push -u origin "$CURRENT_BRANCH" 2>/dev/null; then
+            echo "   ✅ Changes pushed to GitHub"
+        else
             echo "   ⚠️  Could not push to remote (non-blocking)"
             echo "   You can manually push with: git push origin $CURRENT_BRANCH"
-        }
-        echo "   ✅ Changes pushed to GitHub"
+        fi
     else
         echo "   ✅ Repository is up to date (no changes to push)"
     fi
