@@ -115,6 +115,13 @@ if [ -d "$SUBDIR" ]; then
         # Docker directory exists - sync Dockerfiles to get latest fixes
         PARENT_ROOT="$(cd .. && pwd)"
         sync_dockerfiles "$PARENT_ROOT" || true
+        
+        # Also sync config.yaml.example to ensure latest defaults
+        if [ -f "$PARENT_ROOT/config.yaml.example" ]; then
+            if [ ! -f "config.yaml.example" ] || ! cmp -s "$PARENT_ROOT/config.yaml.example" "config.yaml.example" 2>/dev/null; then
+                cp -f "$PARENT_ROOT/config.yaml.example" "config.yaml.example"
+            fi
+        fi
     fi
     
     # Create minimal config.yaml if missing (only project name, git_repo, and minimal services)

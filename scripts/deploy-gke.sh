@@ -55,6 +55,13 @@ echo ""
 # ────────────────────────────────────────────────────────────────────────────────
 echo "📋 Checking configuration..."
 
+# Sync config.yaml.example from main directory if it exists (to ensure latest defaults)
+if [ -f "$TOOL_DIR/config.yaml.example" ] && [ -d "$PROJECT_ROOT" ]; then
+    if [ ! -f "$PROJECT_ROOT/config.yaml.example" ] || ! cmp -s "$TOOL_DIR/config.yaml.example" "$PROJECT_ROOT/config.yaml.example" 2>/dev/null; then
+        cp -f "$TOOL_DIR/config.yaml.example" "$PROJECT_ROOT/config.yaml.example" 2>/dev/null || true
+    fi
+fi
+
 if [ ! -f "$PROJECT_ROOT/config.yaml" ]; then
     echo "⚠️  config.yaml not found in $PROJECT_ROOT"
     echo ""
@@ -88,22 +95,29 @@ DOMAIN_NAME=$(grep "domain_name:" "$PROJECT_ROOT/config.yaml" | grep -v "^[[:spa
 
 # Check if GCP project_id is missing or contains placeholder value
 # Also check if region is using old default (us-central1) and should be updated to new default (us-east1)
+# Also check if node_count is using old default (2) and should be updated to new default (1)
 NEEDS_CONFIG_UPDATE=false
+UPDATE_MESSAGES=""
+
 if [ -z "$GCP_PROJECT_ID" ] || [ "$GCP_PROJECT_ID" = "your-gcp-project-id" ]; then
     NEEDS_CONFIG_UPDATE=true
-elif [ "$GCP_REGION" = "us-central1" ]; then
+    UPDATE_MESSAGES="${UPDATE_MESSAGES}⚠️  GCP project_id is missing or contains placeholder value\n"
+fi
+
+if [ "$GCP_REGION" = "us-central1" ]; then
     # Region is using old default - offer to update to new default
     NEEDS_CONFIG_UPDATE=true
+    UPDATE_MESSAGES="${UPDATE_MESSAGES}⚠️  Region is set to old default (us-central1)\n   The default region has been updated to us-east1 to avoid quota limits\n   We'll update your config to use the new default (us-east1)\n"
+fi
+
+if [ "$NODE_COUNT" = "2" ]; then
+    # Node count is using old default - offer to update to new default
+    NEEDS_CONFIG_UPDATE=true
+    UPDATE_MESSAGES="${UPDATE_MESSAGES}⚠️  Node count is set to old default (2)\n   The default node count has been updated to 1 (results in 3 nodes total for regional clusters)\n   We'll update your config to use the new default (1)\n"
 fi
 
 if [ "$NEEDS_CONFIG_UPDATE" = true ]; then
-    if [ -z "$GCP_PROJECT_ID" ] || [ "$GCP_PROJECT_ID" = "your-gcp-project-id" ]; then
-        echo "⚠️  GCP project_id is missing or contains placeholder value"
-    elif [ "$GCP_REGION" = "us-central1" ]; then
-        echo "⚠️  Region is set to old default (us-central1)"
-        echo "   The default region has been updated to us-east1 to avoid quota limits"
-        echo "   We'll update your config to use the new default (us-east1)"
-    fi
+    echo -e "$UPDATE_MESSAGES"
     echo ""
     echo "Let's configure your GCP deployment settings! (takes ~1 minute)"
     echo ""

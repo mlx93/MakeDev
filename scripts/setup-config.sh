@@ -75,6 +75,23 @@ read -p "Enter desired GitHub repo name [$project_name]: " git_repo_name
 # Use project_name as default if empty
 git_repo_name=${git_repo_name:-$project_name}
 
+# Read existing GCP settings from config.yaml if it exists
+EXISTING_GCP_PROJECT_ID=""
+EXISTING_GCP_REGION=""
+EXISTING_CLUSTER_NAME=""
+EXISTING_MACHINE_TYPE=""
+EXISTING_NODE_COUNT=""
+EXISTING_DOMAIN_NAME=""
+
+if [ -f "$CONFIG_FILE" ]; then
+    EXISTING_GCP_PROJECT_ID=$(grep "project_id:" "$CONFIG_FILE" | head -1 | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ' || echo "")
+    EXISTING_GCP_REGION=$(grep "region:" "$CONFIG_FILE" | head -1 | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ' || echo "")
+    EXISTING_CLUSTER_NAME=$(grep "cluster_name:" "$CONFIG_FILE" | head -1 | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ' || echo "")
+    EXISTING_MACHINE_TYPE=$(grep "machine_type:" "$CONFIG_FILE" | head -1 | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ' || echo "")
+    EXISTING_NODE_COUNT=$(grep "node_count:" "$CONFIG_FILE" | head -1 | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ' || echo "")
+    EXISTING_DOMAIN_NAME=$(grep "domain_name:" "$CONFIG_FILE" | grep -v "^[[:space:]]*#" | head -1 | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ' || echo "")
+fi
+
 echo ""
 echo "☁️  Google Cloud Platform (GKE) Configuration"
 echo "──────────────────────────────────────────"
@@ -84,7 +101,14 @@ echo "  1. Visit: https://console.cloud.google.com/"
 echo "  2. Select your project from the dropdown"
 echo "  3. Copy the Project ID (not the name)"
 echo ""
-read -p "Enter your GCP project ID: " gcp_project_id
+
+# Use existing project_id as default if available
+if [ -n "$EXISTING_GCP_PROJECT_ID" ] && [ "$EXISTING_GCP_PROJECT_ID" != "your-gcp-project-id" ]; then
+    read -p "Enter your GCP project ID [$EXISTING_GCP_PROJECT_ID]: " gcp_project_id
+    gcp_project_id=${gcp_project_id:-$EXISTING_GCP_PROJECT_ID}
+else
+    read -p "Enter your GCP project ID: " gcp_project_id
+fi
 
 if [ -z "$gcp_project_id" ]; then
     echo "❌ GCP project ID cannot be empty"
@@ -96,12 +120,30 @@ read -p "Use all default settings for region, cluster name, machine type, etc.? 
 use_defaults=${use_defaults:-Y}
 
 if [[ "$use_defaults" =~ ^[Yy]$ ]] || [ -z "$use_defaults" ]; then
-    # Use all defaults
-    gcp_region="us-east1"
+    # Use defaults, but update old defaults if found
+    # If existing values are old defaults, use new defaults; otherwise preserve existing
+    if [ "$EXISTING_GCP_REGION" = "us-central1" ] || [ -z "$EXISTING_GCP_REGION" ]; then
+        gcp_region="us-east1"
+    else
+        gcp_region="$EXISTING_GCP_REGION"
+    fi
+    
     cluster_name=""  # Will be auto-generated as ${project_name}-cluster
-    machine_type="e2-medium"
-    node_count=1
-    domain_name=""
+    
+    if [ -z "$EXISTING_MACHINE_TYPE" ]; then
+        machine_type="e2-medium"
+    else
+        machine_type="$EXISTING_MACHINE_TYPE"
+    fi
+    
+    # Update old default (2) to new default (1), but preserve custom values
+    if [ "$EXISTING_NODE_COUNT" = "2" ] || [ -z "$EXISTING_NODE_COUNT" ]; then
+        node_count=1
+    else
+        node_count="$EXISTING_NODE_COUNT"
+    fi
+    
+    domain_name="${EXISTING_DOMAIN_NAME:-}"
     
     echo ""
     echo "✅ Using default settings:"
@@ -126,8 +168,16 @@ else
     echo "  • europe-west1 (Belgium)"
     echo "  • asia-southeast1 (Singapore)"
     echo ""
-    read -p "Enter GCP region [us-east1]: " gcp_region
-    gcp_region=${gcp_region:-us-east1}
+    # Use existing region as default, but update old default (us-central1) to new default (us-east1)
+    if [ "$EXISTING_GCP_REGION" = "us-central1" ]; then
+        DEFAULT_REGION="us-east1"
+    elif [ -n "$EXISTING_GCP_REGION" ]; then
+        DEFAULT_REGION="$EXISTING_GCP_REGION"
+    else
+        DEFAULT_REGION="us-east1"
+    fi
+    read -p "Enter GCP region [$DEFAULT_REGION]: " gcp_region
+    gcp_region=${gcp_region:-$DEFAULT_REGION}
     
     echo ""
     echo "⚙️  Advanced Configuration (Optional)"
@@ -136,11 +186,21 @@ else
     read -p "Enter GKE cluster name [${project_name}-cluster (auto-generated)]: " cluster_name
     cluster_name=${cluster_name:-""}
     
-    read -p "Enter machine type [e2-medium]: " machine_type
-    machine_type=${machine_type:-e2-medium}
+    # Use existing machine_type as default if available
+    DEFAULT_MACHINE_TYPE="${EXISTING_MACHINE_TYPE:-e2-medium}"
+    read -p "Enter machine type [$DEFAULT_MACHINE_TYPE]: " machine_type
+    machine_type=${machine_type:-$DEFAULT_MACHINE_TYPE}
     
-    read -p "Enter number of nodes [1]: " node_count
-    node_count=${node_count:-1}
+    # Use existing node_count as default, but update old default (2) to new default (1)
+    if [ "$EXISTING_NODE_COUNT" = "2" ]; then
+        DEFAULT_NODE_COUNT="1"
+    elif [ -n "$EXISTING_NODE_COUNT" ]; then
+        DEFAULT_NODE_COUNT="$EXISTING_NODE_COUNT"
+    else
+        DEFAULT_NODE_COUNT="1"
+    fi
+    read -p "Enter number of nodes [$DEFAULT_NODE_COUNT]: " node_count
+    node_count=${node_count:-$DEFAULT_NODE_COUNT}
     
     echo ""
     echo "🌐 Domain Name (Optional - for HTTPS)"

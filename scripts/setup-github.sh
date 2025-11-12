@@ -223,7 +223,7 @@ if [ -n "$GIT_REPO" ] && [ "$GIT_REPO" != '""' ] && [ "$GIT_REPO" != "" ]; then
     echo "📦 Using existing GitHub repository from config.yaml..."
     echo "   Repository: $REPO_NAME"
     echo "   URL: $REPO_URL"
-    echo ""
+echo ""
     
     # Ensure remote is set to the URL from config.yaml
     cd "$PROJECT_ROOT"
