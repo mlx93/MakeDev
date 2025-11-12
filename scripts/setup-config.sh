@@ -60,20 +60,8 @@ else
     echo ""
 fi
 
-# Read existing git_repo if config exists
-EXISTING_GIT_REPO=""
-if [ -f "$CONFIG_FILE" ]; then
-    EXISTING_GIT_REPO=$(grep "git_repo:" "$CONFIG_FILE" | head -1 | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ' || echo "")
-fi
-
-echo "🔗 GitHub Configuration"
-echo "──────────────────────────────────────────"
-echo ""
-echo "We'll create a GitHub repository for you during deployment."
-read -p "Enter desired GitHub repo name [$project_name]: " git_repo_name
-
-# Use project_name as default if empty
-git_repo_name=${git_repo_name:-$project_name}
+# GitHub repo name will automatically use project_name during deployment
+# No need to prompt - setup-github.sh will use PROJECT_NAME when git_repo is empty
 
 # Read existing GCP settings from config.yaml if it exists
 EXISTING_GCP_PROJECT_ID=""
@@ -225,7 +213,7 @@ cat > "$CONFIG_FILE" << EOF
 
 project:
   name: "$project_name"
-  git_repo: ""  # Will be auto-generated during deployment: $git_repo_name
+  git_repo: ""  # Will be auto-generated during deployment using project name
 
 services:
   frontend:
@@ -265,7 +253,7 @@ echo "────────────────────────�
 echo "📋 Your Configuration Summary:"
 echo "──────────────────────────────────────────"
 echo "  Project Name:      $project_name"
-echo "  GitHub Repo:       $git_repo_name (will be created)"
+echo "  GitHub Repo:       $project_name (will be created automatically)"
 echo "  GCP Project ID:    $gcp_project_id"
 echo "  GCP Region:        $gcp_region"
 echo "  Cluster Name:      ${cluster_name:-$project_name-cluster (auto)}"

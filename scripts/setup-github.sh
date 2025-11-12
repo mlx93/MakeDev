@@ -241,8 +241,8 @@ echo ""
 else
     # No GIT_REPO set, use PROJECT_NAME to create/find repo
     REPO_NAME="$PROJECT_NAME"
-    echo "📦 Creating GitHub repository..."
-    echo "   Repository name: $REPO_NAME"
+    echo "📦 Setting up GitHub repository..."
+    echo "   Checking for repository: $REPO_NAME"
     echo ""
 fi
 
@@ -369,15 +369,27 @@ fi
 
 # Create GitHub repository if it doesn't exist (only if GIT_REPO was not set)
 if gh repo view "$REPO_NAME" &> /dev/null; then
-    echo "✅ Repository already exists on GitHub: $REPO_NAME"
+    echo "✅ Found existing repository on GitHub: $REPO_NAME"
     REPO_URL=$(gh repo view "$REPO_NAME" --json url -q .url)
+    echo "   URL: $REPO_URL"
+    echo ""
     
     # Ensure remote is set
     cd "$PROJECT_ROOT"
     if ! git remote get-url origin &> /dev/null; then
-        echo "   Setting remote origin..."
+        echo "   🔗 Connecting to existing repository..."
         git remote add origin "$REPO_URL" 2>/dev/null || \
         git remote set-url origin "$REPO_URL" 2>/dev/null || true
+        echo "   ✅ Connected to remote repository"
+    else
+        CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo "")
+        if [ "$CURRENT_REMOTE" != "$REPO_URL" ]; then
+            echo "   🔗 Updating remote URL..."
+            git remote set-url origin "$REPO_URL" 2>/dev/null || true
+            echo "   ✅ Remote URL updated"
+        else
+            echo "   ✅ Already connected to correct repository"
+        fi
     fi
     
     # Check if there are unpushed commits (changes were already committed above)
@@ -407,7 +419,7 @@ if gh repo view "$REPO_NAME" &> /dev/null; then
     fi
 else
     # Create new private repository
-    echo "   Creating private repository..."
+    echo "   Creating new private repository: $REPO_NAME"
     gh repo create "$REPO_NAME" --private --source=. --remote=origin --push || {
         echo "❌ Failed to create repository"
         echo ""
