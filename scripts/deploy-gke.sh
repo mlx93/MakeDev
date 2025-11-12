@@ -879,11 +879,16 @@ echo ""
 # ────────────────────────────────────────────────────────────────────────────────
 echo "🌱 Seeding database with test data..."
 
+# Initialize SEED_SKIPPED flag (will be set to true if seed is skipped for any reason)
+SEED_SKIPPED=false
+
 # Check if backend directory exists
 if [ ! -d "$PROJECT_ROOT/backend" ]; then
     echo "   ⚠️  Backend directory not found - skipping seed"
+    SEED_SKIPPED=true
 elif [ ! -f "$PROJECT_ROOT/backend/prisma/schema.prisma" ]; then
     echo "   ⚠️  Prisma schema not found - skipping seed"
+    SEED_SKIPPED=true
 else
     # Get a backend pod name (use the first running backend pod)
     BACKEND_POD=$(kubectl get pods -n "$K8S_NAMESPACE" -l app=backend --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
@@ -891,6 +896,7 @@ else
     if [ -z "$BACKEND_POD" ]; then
         echo "   ⚠️  No running backend pod found - skipping seed"
         echo "   You can manually seed later with: make seed SUBDIR=$(basename "$PROJECT_ROOT")"
+        SEED_SKIPPED=true
     else
         echo "   Using backend pod: $BACKEND_POD"
         echo "   Copying seed script and config to pod..."
@@ -941,21 +947,39 @@ else
             # Run seed script - it will detect project root or use /app
             # The script uses process.env.DATABASE_URL which is already set in the pod
             # Use NODE_PATH to ensure modules are found (check both locations)
-            if kubectl exec -n "$K8S_NAMESPACE" "$BACKEND_POD" -- \
+            # Capture output to check if seeding was skipped
+            SEED_OUTPUT=$(kubectl exec -n "$K8S_NAMESPACE" "$BACKEND_POD" -- \
                 sh -c "cd /app/backend && \
                        export NODE_PATH=/app/backend/node_modules:/tmp/node_modules:\$NODE_PATH && \
                        if [ -f /tmp/seed/config.yaml ]; then \
                          mkdir -p /app && cp /tmp/seed/config.yaml /app/config.yaml; \
                        fi && \
-                       npx tsx /tmp/seed/seed-database.ts /app 2>&1" 2>&1; then
+                       npx tsx /tmp/seed/seed-database.ts /app 2>&1" 2>&1)
+            SEED_EXIT_CODE=$?
+            
+            # Check if seed was skipped (no tables exist)
+            SEED_SKIPPED=false
+            if echo "$SEED_OUTPUT" | grep -q "Skipping seed\|No database tables found"; then
+                SEED_SKIPPED=true
+                echo "$SEED_OUTPUT"
+            elif [ $SEED_EXIT_CODE -eq 0 ]; then
+                echo "$SEED_OUTPUT"
                 echo "   ✅ Database seeded successfully"
             else
                 # Try without config.yaml (use defaults)
                 echo "   Retrying with default seed configuration..."
-                if kubectl exec -n "$K8S_NAMESPACE" "$BACKEND_POD" -- \
-                    sh -c "cd /app/backend && export NODE_PATH=/app/backend/node_modules:/tmp/node_modules:\$NODE_PATH && npx tsx /tmp/seed/seed-database.ts /app 2>&1" 2>&1; then
+                SEED_OUTPUT=$(kubectl exec -n "$K8S_NAMESPACE" "$BACKEND_POD" -- \
+                    sh -c "cd /app/backend && export NODE_PATH=/app/backend/node_modules:/tmp/node_modules:\$NODE_PATH && npx tsx /tmp/seed/seed-database.ts /app 2>&1" 2>&1)
+                SEED_EXIT_CODE=$?
+                
+                if echo "$SEED_OUTPUT" | grep -q "Skipping seed\|No database tables found"; then
+                    SEED_SKIPPED=true
+                    echo "$SEED_OUTPUT"
+                elif [ $SEED_EXIT_CODE -eq 0 ]; then
+                    echo "$SEED_OUTPUT"
                     echo "   ✅ Database seeded successfully (using defaults)"
                 else
+                    echo "$SEED_OUTPUT"
                     echo "   ⚠️  Seed script failed - database may be empty"
                     echo "   You can manually seed later with: make seed SUBDIR=$(basename "$PROJECT_ROOT")"
                 fi
@@ -967,6 +991,7 @@ else
         else
             echo "   ⚠️  Could not copy seed script to pod - skipping seed"
             echo "   You can manually seed later with: make seed SUBDIR=$(basename "$PROJECT_ROOT")"
+            SEED_SKIPPED=true
         fi
     fi
 fi
@@ -1176,13 +1201,17 @@ echo "  - LoadBalancer: ~\$18/month"
 echo "  - Storage (10GB): ~\$2/month"
 echo "  - Total: ~\$68-73/month"
 echo ""
-echo "🔑 Demo User Credentials:"
-echo "  Email:    demo@example.com"
-echo "  Password: demo123"
-echo ""
-echo "  Use these credentials to log in and test your application."
-echo "  Note: Run 'make seed' to generate seed data if needed."
-echo ""
+
+# Only show demo credentials if seeding actually occurred (not skipped for hello world apps)
+if [ "$SEED_SKIPPED" != "true" ]; then
+    echo "🔑 Demo User Credentials:"
+    echo "  Email:    demo@example.com"
+    echo "  Password: demo123"
+    echo ""
+    echo "  Use these credentials to log in and test your application."
+    echo "  Note: Run 'make seed' to generate seed data if needed."
+    echo ""
+fi
 echo "⚠️  Remember to run 'make destroy' when done to avoid ongoing costs!"
 echo ""
 

@@ -262,6 +262,26 @@ function parsePrismaSchema(schema: string): Model[] {
   return models
 }
 
+// Check if a table exists in the database
+async function tableExists(tableName: string): Promise<boolean> {
+  try {
+    // Use raw SQL to check if table exists in public schema
+    // Use Prisma.sql for safe parameterized queries
+    const result = await prisma.$queryRaw<Array<{ exists: boolean }>>`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = ${tableName.toLowerCase()}
+      ) as exists
+    `
+    return result[0]?.exists || false
+  } catch (error) {
+    // If query fails, assume table doesn't exist
+    // This handles cases where the database isn't ready or tables haven't been created
+    return false
+  }
+}
+
 // Generate seed data
 async function generateSeedData() {
   const startTime = Date.now()
@@ -272,6 +292,15 @@ async function generateSeedData() {
     // Connect to database
     await prisma.$connect()
     console.log('✅ Connected to database')
+
+    // Check if public.user table exists - if not, skip seeding (hello world apps don't have tables)
+    const userTableExists = await tableExists('user')
+    if (!userTableExists) {
+      console.log('\n⏭️  No database tables found (public.user does not exist)')
+      console.log('   Skipping seed - this appears to be a hello world app without database tables')
+      console.log('   Seed is only needed for apps with Prisma models and database tables')
+      return
+    }
 
     // Find User model (if exists) and generate users first
     const userModel = models.find(m => m.name.toLowerCase() === 'user')
