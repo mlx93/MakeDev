@@ -58,6 +58,33 @@ if [ ! -d "docker" ] || [ ! -d "scripts" ] || [ ! -f "Makefile" ]; then
             [ -f "$TOOL_REPO/config.yaml.example" ] && cp "$TOOL_REPO/config.yaml.example" "$PROJECT_ROOT/" 2>/dev/null || true
         fi
         
+        # Always sync Dockerfiles from parent (they may have been updated)
+        # This ensures subdirectories get the latest Dockerfile fixes
+        if [ -d "$TOOL_REPO/docker" ] && [ -d "$PROJECT_ROOT/docker" ]; then
+            UPDATED=false
+            if [ -f "$TOOL_REPO/docker/Dockerfile.backend" ]; then
+                if ! cmp -s "$TOOL_REPO/docker/Dockerfile.backend" "$PROJECT_ROOT/docker/Dockerfile.backend" 2>/dev/null; then
+                    cp -f "$TOOL_REPO/docker/Dockerfile.backend" "$PROJECT_ROOT/docker/Dockerfile.backend"
+                    UPDATED=true
+                fi
+            fi
+            if [ -f "$TOOL_REPO/docker/Dockerfile.frontend" ]; then
+                if ! cmp -s "$TOOL_REPO/docker/Dockerfile.frontend" "$PROJECT_ROOT/docker/Dockerfile.frontend" 2>/dev/null; then
+                    cp -f "$TOOL_REPO/docker/Dockerfile.frontend" "$PROJECT_ROOT/docker/Dockerfile.frontend"
+                    UPDATED=true
+                fi
+            fi
+            if [ -f "$TOOL_REPO/docker/docker-compose.yml" ]; then
+                if ! cmp -s "$TOOL_REPO/docker/docker-compose.yml" "$PROJECT_ROOT/docker/docker-compose.yml" 2>/dev/null; then
+                    cp -f "$TOOL_REPO/docker/docker-compose.yml" "$PROJECT_ROOT/docker/docker-compose.yml"
+                    UPDATED=true
+                fi
+            fi
+            if [ "$UPDATED" = true ]; then
+                echo "   🔄 Updated Dockerfiles from parent"
+            fi
+        fi
+        
         # Update SCRIPT_DIR since we may have copied scripts
         SCRIPT_DIR="$PROJECT_ROOT/scripts"
         
@@ -67,6 +94,45 @@ if [ ! -d "docker" ] || [ ! -d "scripts" ] || [ ! -f "Makefile" ]; then
         echo "   Please run: bash <tool-repo>/scripts/bootstrap.sh"
         echo "   Or ensure you have the tool files (docker/, scripts/, Makefile) in this directory"
         exit 1
+    fi
+else
+    # Docker directory already exists - still sync Dockerfiles to get latest fixes
+    # Try to find the tool repository for syncing
+    TOOL_REPO=""
+    CURRENT_DIR="$PROJECT_ROOT"
+    while [ "$CURRENT_DIR" != "/" ]; do
+        PARENT_DIR="$(dirname "$CURRENT_DIR")"
+        if [ -f "$PARENT_DIR/Makefile" ] && [ -d "$PARENT_DIR/docker" ] && [ -d "$PARENT_DIR/scripts" ]; then
+            TOOL_REPO="$PARENT_DIR"
+            break
+        fi
+        CURRENT_DIR="$PARENT_DIR"
+    done
+    
+    # Sync Dockerfiles if tool repo found (only report when files change)
+    if [ -n "$TOOL_REPO" ] && [ -d "$TOOL_REPO/docker" ] && [ -d "$PROJECT_ROOT/docker" ]; then
+        UPDATED=false
+        if [ -f "$TOOL_REPO/docker/Dockerfile.backend" ]; then
+            if ! cmp -s "$TOOL_REPO/docker/Dockerfile.backend" "$PROJECT_ROOT/docker/Dockerfile.backend" 2>/dev/null; then
+                cp -f "$TOOL_REPO/docker/Dockerfile.backend" "$PROJECT_ROOT/docker/Dockerfile.backend"
+                UPDATED=true
+            fi
+        fi
+        if [ -f "$TOOL_REPO/docker/Dockerfile.frontend" ]; then
+            if ! cmp -s "$TOOL_REPO/docker/Dockerfile.frontend" "$PROJECT_ROOT/docker/Dockerfile.frontend" 2>/dev/null; then
+                cp -f "$TOOL_REPO/docker/Dockerfile.frontend" "$PROJECT_ROOT/docker/Dockerfile.frontend"
+                UPDATED=true
+            fi
+        fi
+        if [ -f "$TOOL_REPO/docker/docker-compose.yml" ]; then
+            if ! cmp -s "$TOOL_REPO/docker/docker-compose.yml" "$PROJECT_ROOT/docker/docker-compose.yml" 2>/dev/null; then
+                cp -f "$TOOL_REPO/docker/docker-compose.yml" "$PROJECT_ROOT/docker/docker-compose.yml"
+                UPDATED=true
+            fi
+        fi
+        if [ "$UPDATED" = true ]; then
+            echo "🔄 Updated Dockerfiles from parent tool repository"
+        fi
     fi
 fi
 
@@ -345,8 +411,44 @@ cd ..
 # Build Docker images
 cd "$PROJECT_ROOT/docker"
 
+# Create .env file to set DOCKER_BUILD_TARGET for docker-compose
+# This is more reliable than environment variables
+echo "DOCKER_BUILD_TARGET=dev" > .env
+echo "PROJECT_NAME=${PROJECT_NAME}" >> .env
+
+# Final sync of Dockerfiles before build (ensure we have latest fixes)
+# This is critical - Dockerfiles may have been updated in the parent repo
+DOCKERFILE_SYNCED=false
+if [ -n "$TOOL_REPO" ] && [ -d "$TOOL_REPO/docker" ] && [ -d "$PROJECT_ROOT/docker" ]; then
+    # Check if files differ before syncing
+    if [ -f "$TOOL_REPO/docker/Dockerfile.backend" ]; then
+        if ! cmp -s "$TOOL_REPO/docker/Dockerfile.backend" "$PROJECT_ROOT/docker/Dockerfile.backend" 2>/dev/null; then
+            cp -f "$TOOL_REPO/docker/Dockerfile.backend" "$PROJECT_ROOT/docker/Dockerfile.backend"
+            DOCKERFILE_SYNCED=true
+        fi
+    fi
+    if [ -f "$TOOL_REPO/docker/Dockerfile.frontend" ]; then
+        if ! cmp -s "$TOOL_REPO/docker/Dockerfile.frontend" "$PROJECT_ROOT/docker/Dockerfile.frontend" 2>/dev/null; then
+            cp -f "$TOOL_REPO/docker/Dockerfile.frontend" "$PROJECT_ROOT/docker/Dockerfile.frontend"
+            DOCKERFILE_SYNCED=true
+        fi
+    fi
+    # Always check and sync docker-compose.yml - it's critical for build targets
+    if [ -f "$TOOL_REPO/docker/docker-compose.yml" ]; then
+        if [ ! -f "$PROJECT_ROOT/docker/docker-compose.yml" ] || ! cmp -s "$TOOL_REPO/docker/docker-compose.yml" "$PROJECT_ROOT/docker/docker-compose.yml" 2>/dev/null || ! grep -q "target:" "$PROJECT_ROOT/docker/docker-compose.yml" 2>/dev/null; then
+            cp -f "$TOOL_REPO/docker/docker-compose.yml" "$PROJECT_ROOT/docker/docker-compose.yml"
+            DOCKERFILE_SYNCED=true
+            echo "🔄 Updated docker-compose.yml (ensured build target is set)"
+        fi
+    fi
+    if [ "$DOCKERFILE_SYNCED" = true ]; then
+        echo "🔄 Updated Dockerfiles before build - forcing rebuild"
+        FORCE_REBUILD=true
+    fi
+fi
+
 # Check if lock files are newer than Docker images (indicates need for rebuild without cache)
-FORCE_REBUILD=false
+FORCE_REBUILD=${FORCE_REBUILD:-false}
 if [ -f "../backend/package-lock.json" ]; then
     LOCK_FILE_TIME=$(stat -f "%m" "../backend/package-lock.json" 2>/dev/null || stat -c "%Y" "../backend/package-lock.json" 2>/dev/null || echo "0")
     IMAGE_TIME=$(docker images docker-backend:latest --format "{{.CreatedAt}}" 2>/dev/null | xargs -I {} date -j -f "%Y-%m-%d %H:%M:%S" "{}" "+%s" 2>/dev/null || docker images docker-backend:latest --format "{{.CreatedAt}}" 2>/dev/null | xargs -I {} date -d "{}" "+%s" 2>/dev/null || echo "0")
@@ -358,18 +460,21 @@ fi
 
 if [ "$LOCK_FILE_REGENERATED" = true ] || [ "$FORCE_REBUILD" = true ]; then
     echo "🔨 Building Docker images (without cache - lock files changed)..."
-    docker-compose build --no-cache
+    # Pass DOCKER_BUILD_TARGET directly to docker-compose
+    DOCKER_BUILD_TARGET=dev docker-compose build --no-cache
     # Stop and remove existing containers to ensure they use the new image
     echo "   Stopping existing containers to use new image..."
     docker-compose down > /dev/null 2>&1 || true
 else
     echo "🔨 Building Docker images..."
-    docker-compose build
+    # Pass DOCKER_BUILD_TARGET directly to docker-compose
+    DOCKER_BUILD_TARGET=dev docker-compose build
 fi
 
 # Start services
 echo "🚀 Starting services..."
-docker-compose up -d
+# Pass DOCKER_BUILD_TARGET directly to docker-compose
+DOCKER_BUILD_TARGET=dev docker-compose up -d
 
 # Wait for health checks
 echo "⏳ Waiting for services to be healthy..."

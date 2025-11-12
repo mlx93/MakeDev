@@ -1,8 +1,8 @@
 # Active Context: Zero-to-Running Developer Environment
 
-**Last Updated:** November 11, 2025  
+**Last Updated:** November 12, 2025  
 **Current Phase:** ✅ **PROJECT COMPLETE** - All Phases Finished  
-**Status:** All Agents Complete, Documentation Finalized, Ready for Use
+**Status:** All Agents Complete, Documentation Finalized, Docker Build Target & Sync Fixes Complete, Ready for Use
 
 ---
 
@@ -16,6 +16,55 @@
 ---
 
 ## Recent Changes
+
+### Docker Build Target & Sync Fixes (November 12, 2025)
+
+**Issue Fixed:**
+- Backend containers were building with production stage instead of development stage
+- Dockerfiles in subdirectories weren't being synced properly from parent repository
+- Redundant sync messages cluttering output
+
+**Changes Implemented:**
+
+1. **Docker Build Target Configuration**
+   - Added `target: ${DOCKER_BUILD_TARGET:-dev}` to `docker-compose.yml` for both backend and frontend
+   - Created `.env` file approach in `setup-local.sh` to set `DOCKER_BUILD_TARGET=dev` for local development
+   - `make dev` now uses `dev` stage (hot reload with `npx tsx watch`)
+   - `make deploy` uses `prod` stage (compiled production builds)
+   - Environment variable passed directly to docker-compose commands
+
+2. **Dockerfile Sync Mechanism**
+   - Created `sync_dockerfiles()` helper function in `dev-subdir.sh` that only reports when files change
+   - Sync checks if `target:` line exists in docker-compose.yml - if missing, syncs from parent
+   - Added explicit docker-compose.yml sync in `setup-local.sh` before builds
+   - Sync happens at multiple points: after copying docker directory, before builds, and when infrastructure exists
+   - Sync function handles missing files gracefully (checks existence before comparing)
+
+3. **Consolidated Sync Messages**
+   - Removed redundant per-file sync messages
+   - Now shows single message: `🔄 Updated Dockerfiles from parent` only when files actually change
+   - Silent when files are already up to date
+
+4. **Fixed Dockerfile.backend TypeScript Compilation**
+   - Updated production stage to use `./node_modules/.bin/tsc` instead of `npx tsc`
+   - Added TypeScript installation step before compilation
+   - Fixed in parent docker/Dockerfile.backend and scaffold-templates/root/docker/Dockerfile.backend
+
+**Files Modified:**
+- `scripts/dev-subdir.sh` - Added sync_dockerfiles() function, consolidated sync logic
+- `scripts/setup-local.sh` - Added .env file creation, explicit docker-compose.yml sync, DOCKER_BUILD_TARGET handling
+- `scripts/bootstrap.sh` - Added Dockerfile sync after copying
+- `docker/docker-compose.yml` - Added `target: ${DOCKER_BUILD_TARGET:-dev}` to backend and frontend builds
+- `scaffold-templates/root/docker/Dockerfile.backend` - Fixed TypeScript compilation command
+
+**Result:**
+- ✅ New subdirectories automatically get correct docker-compose.yml with build target
+- ✅ Backend containers build with dev stage for local development
+- ✅ Production builds use prod stage for deployment
+- ✅ Clean, minimal sync messages
+- ✅ Dockerfiles always stay in sync with parent repository
+
+---
 
 ### D&D Agent Complete (November 11, 2025)
 
@@ -196,9 +245,12 @@
 - A&D built **tool infrastructure** (seed generator, enhanced health endpoints)
 - ETA built **example-task-app** (complete task CRUD app, fully functional)
 - C&C Part 2 built **GKE deployment infrastructure** (Terraform + K8s, production-ready with HTTPS/DNS)
-- D&D will build **documentation and demo runbook** (final polish)
+- D&D built **documentation and demo runbook** (final polish)
 - Seed generator works with any Prisma schema (schema-agnostic)
 - Health endpoints check database/Redis connectivity
+- **Docker build targets**: `make dev` uses `dev` stage (hot reload), `make deploy` uses `prod` stage (compiled)
+- **Dockerfile sync**: Subdirectories automatically sync Dockerfiles from parent repository before builds
+- **.env file**: Created in docker/ directory to set DOCKER_BUILD_TARGET=dev for local development
 
 ### Constraints
 - **NO MD files during implementation** - Only code/config files

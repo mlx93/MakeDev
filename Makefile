@@ -1,4 +1,5 @@
-.PHONY: help config dev seed deploy destroy
+.PHONY: help config dev seed deploy
+# destroy  # DISABLED - Currently disabled for safety
 
 # Default target
 .DEFAULT_GOAL := help
@@ -129,19 +130,20 @@ deploy: ## Deploy to Google Kubernetes Engine
 # ────────────────────────────────────────────────────────────────────────────────
 # Cleanup
 # ────────────────────────────────────────────────────────────────────────────────
-destroy: ## Teardown all resources (local + GKE)
-	@if [ -n "$(SUBDIR)" ]; then \
-		cd "$(SUBDIR)" && \
-		if [ ! -f "config.yaml" ]; then \
-			echo "❌ Error: config.yaml not found in $(SUBDIR)"; \
-			exit 1; \
-		fi && \
-		bash ../scripts/cleanup.sh; \
-	else \
-		if [ ! -f "config.yaml" ]; then \
-			echo "❌ Error: config.yaml not found. Please create it from config.yaml.example"; \
-			exit 1; \
-		fi && \
-		bash scripts/cleanup.sh; \
-	fi
+# DISABLED: make destroy - Currently disabled for safety (namespace mismatch bug, cluster sharing risks)
+# destroy: ## Teardown all resources (local + GKE)
+# 	@if [ -n "$(SUBDIR)" ]; then \
+# 		cd "$(SUBDIR)" && \
+# 		if [ ! -f "config.yaml" ]; then \
+# 			echo "❌ Error: config.yaml not found in $(SUBDIR)"; \
+# 			exit 1; \
+# 		fi && \
+# 		bash ../scripts/cleanup.sh; \
+# 	else \
+# 		if [ ! -f "config.yaml" ]; then \
+# 			echo "❌ Error: config.yaml not found. Please create it from config.yaml.example"; \
+# 			exit 1; \
+# 		fi && \
+# 		bash scripts/cleanup.sh; \
+# 	fi
 

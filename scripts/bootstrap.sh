@@ -76,17 +76,63 @@ rsync -av --exclude='.git' \
     [ -f "$TOOL_REPO/config.yaml.example" ] && cp "$TOOL_REPO/config.yaml.example" "$CURRENT_DIR/"
 }
 
-# Create config.yaml if it doesn't exist
+# Always sync Dockerfiles from parent (they may have been updated)
+# This ensures subdirectories get the latest Dockerfile fixes
+if [ -d "$TOOL_REPO/docker" ] && [ -d "$CURRENT_DIR/docker" ]; then
+    echo "🔄 Syncing Dockerfiles from parent..."
+    if [ -f "$TOOL_REPO/docker/Dockerfile.backend" ]; then
+        cp -f "$TOOL_REPO/docker/Dockerfile.backend" "$CURRENT_DIR/docker/Dockerfile.backend"
+        echo "   ✅ Synced Dockerfile.backend"
+    fi
+    if [ -f "$TOOL_REPO/docker/Dockerfile.frontend" ]; then
+        cp -f "$TOOL_REPO/docker/Dockerfile.frontend" "$CURRENT_DIR/docker/Dockerfile.frontend"
+        echo "   ✅ Synced Dockerfile.frontend"
+    fi
+    if [ -f "$TOOL_REPO/docker/docker-compose.yml" ]; then
+        cp -f "$TOOL_REPO/docker/docker-compose.yml" "$CURRENT_DIR/docker/docker-compose.yml"
+        echo "   ✅ Synced docker-compose.yml"
+    fi
+fi
+
+# Create minimal config.yaml if it doesn't exist (only project name, git_repo, and minimal services)
 if [ ! -f "config.yaml" ]; then
-    echo "📝 Creating config.yaml..."
-    cp config.yaml.example config.yaml
+    echo "📝 Creating minimal config.yaml for local development..."
     
-    # Set empty git_repo for scaffolding
-    sed -i.bak 's/git_repo:.*/git_repo: ""/' config.yaml 2>/dev/null || \
-    sed -i '' 's/git_repo:.*/git_repo: ""/' config.yaml 2>/dev/null || true
-    rm -f config.yaml.bak 2>/dev/null || true
+    # Determine project name: use directory name if in subdirectory, otherwise prompt or use default
+    if [ "$CURRENT_DIR" != "$TOOL_REPO" ]; then
+        # We're in a subdirectory, use directory name as project name
+        PROJECT_NAME=$(basename "$CURRENT_DIR")
+    else
+        # We're in the tool repo itself, use a default or prompt
+        PROJECT_NAME="my-app"
+    fi
     
-    echo "   ✅ Created config.yaml with empty git_repo (will scaffold new app)"
+    cat > config.yaml <<EOF
+project:
+  name: "$PROJECT_NAME"
+  git_repo: ""
+
+services:
+  frontend:
+    path: "./frontend"
+    port: 3000
+  
+  backend:
+    path: "./backend"
+    port: 8080
+  
+  database:
+    schema_path: "./backend/prisma/schema.prisma"
+  
+  cache:
+    enabled: true
+
+seed:
+  users: 30
+  tasks_per_user: "5-10"
+EOF
+    
+    echo "   ✅ Created minimal config.yaml (GCP settings will be prompted during deployment)"
 fi
 
 echo ""

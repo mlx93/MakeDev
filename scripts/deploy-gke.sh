@@ -62,6 +62,7 @@ if [ ! -f "$PROJECT_ROOT/config.yaml" ]; then
     echo ""
     
     # Run interactive config generator
+    cd "$PROJECT_ROOT"
     bash "$TOOL_DIR/scripts/setup-config.sh"
     
     # Verify it was created
@@ -93,6 +94,37 @@ NODE_COUNT=$(grep "node_count:" "$PROJECT_ROOT/config.yaml" | awk -F': ' '{print
 DISK_SIZE_GB=$(grep "disk_size_gb:" "$PROJECT_ROOT/config.yaml" | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
 # Extract domain_name, ignoring commented lines (lines starting with # or whitespace + #)
 DOMAIN_NAME=$(grep "domain_name:" "$PROJECT_ROOT/config.yaml" | grep -v "^[[:space:]]*#" | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
+
+# Check if GCP project_id is missing or contains placeholder value
+if [ -z "$GCP_PROJECT_ID" ] || [ "$GCP_PROJECT_ID" = "your-gcp-project-id" ]; then
+    echo "⚠️  GCP project_id is missing or contains placeholder value"
+    echo ""
+    echo "Let's configure your GCP deployment settings! (takes ~1 minute)"
+    echo ""
+    
+    # Run interactive config generator (from project root)
+    cd "$PROJECT_ROOT"
+    bash "$TOOL_DIR/scripts/setup-config.sh"
+    
+    # Re-read GCP_PROJECT_ID after setup
+    GCP_PROJECT_ID=$(grep "project_id:" "$PROJECT_ROOT/config.yaml" | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
+    GCP_REGION=$(grep "region:" "$PROJECT_ROOT/config.yaml" | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
+    CLUSTER_NAME=$(grep "cluster_name:" "$PROJECT_ROOT/config.yaml" | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
+    MACHINE_TYPE=$(grep "machine_type:" "$PROJECT_ROOT/config.yaml" | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
+    NODE_COUNT=$(grep "node_count:" "$PROJECT_ROOT/config.yaml" | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
+    DISK_SIZE_GB=$(grep "disk_size_gb:" "$PROJECT_ROOT/config.yaml" | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
+    DOMAIN_NAME=$(grep "domain_name:" "$PROJECT_ROOT/config.yaml" | grep -v "^[[:space:]]*#" | awk -F': ' '{print $2}' | tr -d '"' | tr -d ' ')
+    
+    # Verify GCP_PROJECT_ID is now set
+    if [ -z "$GCP_PROJECT_ID" ] || [ "$GCP_PROJECT_ID" = "your-gcp-project-id" ]; then
+        echo "❌ GCP project_id is still not configured"
+        exit 1
+    fi
+    
+    echo ""
+    echo "✅ GCP configuration complete, continuing with deployment..."
+    echo ""
+fi
 
 # Auto-update machine_type to ARM64 ONLY if creating NEW cluster
 # If cluster already exists, we'll detect its architecture and build for that
@@ -127,11 +159,7 @@ if [ -z "$PROJECT_NAME" ]; then
     exit 1
 fi
 
-if [ -z "$GCP_PROJECT_ID" ] || [ "$GCP_PROJECT_ID" == "your-gcp-project-id" ]; then
-    echo "❌ gke.project_id not set in config.yaml"
-    echo "   Please update config.yaml with your GCP project ID"
-    exit 1
-fi
+# GCP_PROJECT_ID validation is already handled above (before this point)
 
 # Set defaults
 GCP_REGION=${GCP_REGION:-us-central1}

@@ -61,7 +61,7 @@ make dev      # Start all services (frontend, backend, postgres, redis)
 make seed     # Generate fake data for testing (30 users, 5-10 tasks each)
 make config   # Interactive config.yaml generator
 make deploy   # Deploy to Google Kubernetes Engine
-make destroy  # Teardown all resources (local + GKE)
+# make destroy  # DISABLED - Teardown all resources (local + GKE) - Currently disabled for safety
 ```
 
 **Command Details:**
@@ -92,11 +92,13 @@ make destroy  # Teardown all resources (local + GKE)
   - Automatically commits and pushes code to GitHub
   - Runs seed script automatically
 
+<!-- DISABLED: make destroy - Currently disabled for safety
 - **`make destroy [SUBDIR=name]`** - Cleanup all resources
   - Prompts for confirmation
   - Removes Kubernetes resources
   - Optionally destroys GKE cluster
   - Displays cost savings estimate
+-->
 
 ---
 
@@ -427,9 +429,10 @@ docker-compose -f docker/docker-compose.yml logs -f
 - **Estimated Total**: ~$68-73/month
 
 **Cost Optimization:**
-- Run `make destroy` when not needed to avoid costs
+- <!-- DISABLED: Run `make destroy` when not needed to avoid costs -->
 - Use HTTP LoadBalancer mode (faster, no Ingress costs)
 - Consider preemptible nodes for dev/staging (50% savings)
+- Manually delete GKE resources via GCP Console when not needed
 
 ---
 

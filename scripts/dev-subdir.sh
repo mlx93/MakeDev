@@ -19,6 +19,42 @@ TOOL_REPO_ROOT="$PROJECT_ROOT"
 
 cd "$PROJECT_ROOT"
 
+# Helper function to sync Dockerfiles (only reports when files change)
+sync_dockerfiles() {
+    local PARENT_ROOT="$1"
+    local UPDATED=false
+    
+    if [ -d "$PARENT_ROOT/docker" ] && [ -d "docker" ]; then
+        if [ -f "$PARENT_ROOT/docker/Dockerfile.backend" ]; then
+            # If target doesn't exist or files differ, copy it
+            if [ ! -f "docker/Dockerfile.backend" ] || ! cmp -s "$PARENT_ROOT/docker/Dockerfile.backend" "docker/Dockerfile.backend" 2>/dev/null; then
+                cp -f "$PARENT_ROOT/docker/Dockerfile.backend" "docker/Dockerfile.backend"
+                UPDATED=true
+            fi
+        fi
+        if [ -f "$PARENT_ROOT/docker/Dockerfile.frontend" ]; then
+            if [ ! -f "docker/Dockerfile.frontend" ] || ! cmp -s "$PARENT_ROOT/docker/Dockerfile.frontend" "docker/Dockerfile.frontend" 2>/dev/null; then
+                cp -f "$PARENT_ROOT/docker/Dockerfile.frontend" "docker/Dockerfile.frontend"
+                UPDATED=true
+            fi
+        fi
+        if [ -f "$PARENT_ROOT/docker/docker-compose.yml" ]; then
+            # Always sync docker-compose.yml - it's critical for build targets
+            # Check if files differ or target doesn't exist
+            if [ ! -f "docker/docker-compose.yml" ] || ! cmp -s "$PARENT_ROOT/docker/docker-compose.yml" "docker/docker-compose.yml" 2>/dev/null || ! grep -q "target:" "docker/docker-compose.yml" 2>/dev/null; then
+                cp -f "$PARENT_ROOT/docker/docker-compose.yml" "docker/docker-compose.yml"
+                UPDATED=true
+            fi
+        fi
+        
+        if [ "$UPDATED" = true ]; then
+            echo "   🔄 Updated Dockerfiles from parent"
+            return 0
+        fi
+    fi
+    return 0  # Always return success, even if nothing was updated
+}
+
 if [ -z "$SUBDIR" ]; then
     # No SUBDIR - run normal dev
     bash "$SCRIPT_DIR/setup-local.sh"
@@ -63,26 +99,52 @@ if [ -d "$SUBDIR" ]; then
             cp -r "$PARENT_ROOT/scripts" . 2>/dev/null || true
             cp -r "$PARENT_ROOT/scaffold-templates" . 2>/dev/null || true
             [ -f "$PARENT_ROOT/config.yaml.example" ] && cp "$PARENT_ROOT/config.yaml.example" . 2>/dev/null || true
+            # Sync Dockerfiles after copying (ensures we have latest versions)
+            sync_dockerfiles "$PARENT_ROOT" || true
         elif [ -f "../scripts/bootstrap.sh" ]; then
             bash "../scripts/bootstrap.sh"
+            sync_dockerfiles "$PARENT_ROOT" || true
         else
             cp -r ../docker . 2>/dev/null || true
             cp -r ../scripts . 2>/dev/null || true
             cp -r ../scaffold-templates . 2>/dev/null || true
             [ -f "../config.yaml.example" ] && cp "../config.yaml.example" . 2>/dev/null || true
+            sync_dockerfiles "$PARENT_ROOT" || true
         fi
+    else
+        # Docker directory exists - sync Dockerfiles to get latest fixes
+        PARENT_ROOT="$(cd .. && pwd)"
+        sync_dockerfiles "$PARENT_ROOT" || true
     fi
     
-    # Create config.yaml if missing (greenfield = empty git_repo)
+    # Create minimal config.yaml if missing (only project name, git_repo, and minimal services)
     if [ ! -f "config.yaml" ]; then
-        if [ -f "config.yaml.example" ]; then
-            cp config.yaml.example config.yaml
-            if [ "$GREENFIELD" = "true" ]; then
-                echo "   Setting git_repo to empty (greenfield scaffold)"
-                sed -i.bak 's/git_repo:.*/git_repo: ""/' config.yaml 2>/dev/null || sed -i '' 's/git_repo:.*/git_repo: ""/' config.yaml 2>/dev/null || true
-                rm -f config.yaml.bak 2>/dev/null || true
-            fi
-        fi
+        echo "   Creating minimal config.yaml for local development..."
+        cat > config.yaml <<EOF
+project:
+  name: "$SUBDIR"
+  git_repo: ""
+
+services:
+  frontend:
+    path: "./frontend"
+    port: 3000
+  
+  backend:
+    path: "./backend"
+    port: 8080
+  
+  database:
+    schema_path: "./backend/prisma/schema.prisma"
+  
+  cache:
+    enabled: true
+
+seed:
+  users: 30
+  tasks_per_user: "5-10"
+EOF
+        echo "   ✅ Created minimal config.yaml (GCP settings will be prompted during deployment)"
     fi
     
     # Run setup-local.sh directly (avoid recursive make calls)
@@ -117,22 +179,95 @@ else
         cp -r "$PARENT_ROOT/scripts" . 2>/dev/null || true
         cp -r "$PARENT_ROOT/scaffold-templates" . 2>/dev/null || true
         [ -f "$PARENT_ROOT/config.yaml.example" ] && cp "$PARENT_ROOT/config.yaml.example" . 2>/dev/null || true
+        
+        # Always sync Dockerfiles after copying to ensure we have latest versions
+        # This is critical - the copied docker-compose.yml might be outdated
+        sync_dockerfiles "$PARENT_ROOT" || true
+        
         if [ ! -f "config.yaml" ]; then
-            cp config.yaml.example config.yaml 2>/dev/null || true
-            sed -i.bak 's/git_repo:.*/git_repo: ""/' config.yaml 2>/dev/null || sed -i '' 's/git_repo:.*/git_repo: ""/' config.yaml 2>/dev/null || true
-            rm -f config.yaml.bak 2>/dev/null || true
+            echo "   Creating minimal config.yaml for local development..."
+            cat > config.yaml <<EOF
+project:
+  name: "$SUBDIR"
+  git_repo: ""
+
+services:
+  frontend:
+    path: "./frontend"
+    port: 3000
+  
+  backend:
+    path: "./backend"
+    port: 8080
+  
+  database:
+    schema_path: "./backend/prisma/schema.prisma"
+  
+  cache:
+    enabled: true
+
+seed:
+  users: 30
+  tasks_per_user: "5-10"
+EOF
+            echo "   ✅ Created minimal config.yaml (GCP settings will be prompted during deployment)"
         fi
     elif [ -f "../scripts/bootstrap.sh" ]; then
         bash "../scripts/bootstrap.sh"
+        sync_dockerfiles "$PARENT_ROOT" || true
     else
         cp -r ../docker . 2>/dev/null || true
         cp -r ../scripts . 2>/dev/null || true
         cp -r ../scaffold-templates . 2>/dev/null || true
         [ -f "../config.yaml.example" ] && cp "../config.yaml.example" . 2>/dev/null || true
+        sync_dockerfiles "$PARENT_ROOT" || true
+        
         if [ ! -f "config.yaml" ]; then
-            cp config.yaml.example config.yaml 2>/dev/null || true
-            sed -i.bak 's/git_repo:.*/git_repo: ""/' config.yaml 2>/dev/null || sed -i '' 's/git_repo:.*/git_repo: ""/' config.yaml 2>/dev/null || true
-            rm -f config.yaml.bak 2>/dev/null || true
+            echo "   Creating minimal config.yaml for local development..."
+            cat > config.yaml <<EOF
+project:
+  name: "$SUBDIR"
+  git_repo: ""
+
+services:
+  frontend:
+    path: "./frontend"
+    port: 3000
+  
+  backend:
+    path: "./backend"
+    port: 8080
+  
+  database:
+    schema_path: "./backend/prisma/schema.prisma"
+  
+  cache:
+    enabled: true
+
+seed:
+  users: 30
+  tasks_per_user: "5-10"
+EOF
+            echo "   ✅ Created minimal config.yaml (GCP settings will be prompted during deployment)"
+        fi
+    fi
+    
+    # Final sync of Dockerfiles from parent (redundant but ensures we have latest)
+    # This ensures subdirectories get the latest Dockerfile fixes even if something was missed
+    PARENT_ROOT="$(cd .. && pwd)"
+    if [ -d "$PARENT_ROOT/docker" ] && [ -d "docker" ]; then
+        echo "   Final sync of Dockerfiles from parent..."
+        if [ -f "$PARENT_ROOT/docker/Dockerfile.backend" ]; then
+            cp -f "$PARENT_ROOT/docker/Dockerfile.backend" "docker/Dockerfile.backend"
+            echo "      ✅ Synced Dockerfile.backend"
+        fi
+        if [ -f "$PARENT_ROOT/docker/Dockerfile.frontend" ]; then
+            cp -f "$PARENT_ROOT/docker/Dockerfile.frontend" "docker/Dockerfile.frontend"
+            echo "      ✅ Synced Dockerfile.frontend"
+        fi
+        if [ -f "$PARENT_ROOT/docker/docker-compose.yml" ]; then
+            cp -f "$PARENT_ROOT/docker/docker-compose.yml" "docker/docker-compose.yml"
+            echo "      ✅ Synced docker-compose.yml"
         fi
     fi
     
