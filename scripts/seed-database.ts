@@ -293,17 +293,30 @@ async function generateSeedData() {
     await prisma.$connect()
     console.log('✅ Connected to database')
 
-    // Check if public.user table exists - if not, skip seeding (hello world apps don't have tables)
+    // Find User model (if exists) in schema
+    const userModel = models.find(m => m.name.toLowerCase() === 'user')
+    
+    // Check if public.user table exists
+    // Only skip seeding if: no User model in schema AND no user table exists (hello world apps)
+    // If User model exists in schema, try seeding anyway (migrations might need to run first)
     const userTableExists = await tableExists('user')
-    if (!userTableExists) {
+    
+    if (!userModel && !userTableExists) {
+      // No User model in schema AND no table exists - this is a hello world app
       console.log('\n⏭️  No database tables found (public.user does not exist)')
       console.log('   Skipping seed - this appears to be a hello world app without database tables')
       console.log('   Seed is only needed for apps with Prisma models and database tables')
       return
     }
-
-    // Find User model (if exists) and generate users first
-    const userModel = models.find(m => m.name.toLowerCase() === 'user')
+    
+    if (userModel && !userTableExists) {
+      // User model exists in schema but table doesn't exist - migrations might not have run
+      console.log('\n⚠️  User model found in schema but database table does not exist')
+      console.log('   This usually means migrations have not been run yet')
+      console.log('   Run migrations first with: npx prisma migrate dev')
+      console.log('   Or run "make dev" which automatically runs migrations')
+      console.log('   Attempting to seed anyway (will fail if tables are missing)...')
+    }
     let demoUserEmail = ''
     let demoUserPassword = ''
     
