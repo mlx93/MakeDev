@@ -369,7 +369,7 @@ See `example-task-app/README.md` for more details.
 
 ## Troubleshooting
 
-For common issues and solutions, see **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)**.
+For common issues and solutions, see **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)**.
 
 **Quick fixes:**
 
@@ -382,7 +382,7 @@ For common issues and solutions, see **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)*
 docker-compose -f docker/docker-compose.yml logs -f
 ```
 
-**GKE deployment issues?** See `PRE_DEPLOYMENT_CHECKLIST.md` for GCP setup requirements.
+**GKE deployment issues?** See `docs/PRE_DEPLOYMENT_CHECKLIST.md` for GCP setup requirements.
 
 **Need more help?** Check `docs/` folder or open an issue.
 
