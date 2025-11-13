@@ -309,14 +309,9 @@ async function generateSeedData() {
       return
     }
     
-    if (userModel && !userTableExists) {
-      // User model exists in schema but table doesn't exist - migrations might not have run
-      console.log('\n⚠️  User model found in schema but database table does not exist')
-      console.log('   This usually means migrations have not been run yet')
-      console.log('   Run migrations first with: npx prisma migrate dev')
-      console.log('   Or run "make dev" which automatically runs migrations')
-      console.log('   Attempting to seed anyway (will fail if tables are missing)...')
-    }
+    // If User model exists, proceed with seeding
+    // If tables don't exist, Prisma will error clearly and the user can run migrations
+    // No need to warn here - if seeding succeeds, tables exist; if it fails, Prisma will show a clear error
     let demoUserEmail = ''
     let demoUserPassword = ''
     
