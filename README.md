@@ -6,31 +6,23 @@
 
 ## Quick Start
 
-**Option 1: Create a new project in a subdirectory (recommended)**
+**Create and start a new project:**
 ```bash
 # 1. Clone this repository
-git clone https://github.com/wander/zero-to-running-dev-env.git
-cd zero-to-running-dev-env
+git clone https://github.com/mlx93/MakeDev.git
+cd MakeDev
 
 # 2. Create and start a new project
 make dev SUBDIR=my-app
 ```
 
-**Option 2: Use from tool root**
-```bash
-# 1. Clone this repository
-git clone https://github.com/wander/zero-to-running-dev-env.git
-cd zero-to-running-dev-env
+That's it! Your frontend, backend, database, and cache are now running at:
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8080
 
-# 2. Copy and configure
-cp config.yaml.example config.yaml
-# Edit config.yaml with your project details
-
-# 3. Start your environment
-make dev
-```
-
-That's it! Your frontend, backend, database, and cache are now running.
+**Next steps:**
+- **For apps with database tables**: Run `make seed SUBDIR=my-app` to generate test data
+- **To deploy**: Run `make deploy SUBDIR=my-app` (will prompt for GCP project ID if needed)
 
 ---
 
@@ -53,44 +45,44 @@ For `make deploy` (GKE), you'll also need:
 
 ## Commands
 
-**Core Commands:**
+**The three commands you need:**
 
 ```bash
-make help     # Display all available commands
-make dev      # Start all services (frontend, backend, postgres, redis)
-make seed     # Generate fake data for testing (30 users, 5-10 tasks each)
-make config   # Interactive config.yaml generator
+make dev      # Start local development environment
+make seed     # Generate test data (for apps with database tables)
 make deploy   # Deploy to Google Kubernetes Engine
-# make destroy  # DISABLED - Teardown all resources (local + GKE) - Currently disabled for safety
 ```
 
 **Command Details:**
 
-- **`make dev [SUBDIR=name]`** - Starts local development environment
-  - Scaffolds new project if `git_repo` is empty
+- **`make dev [SUBDIR=name]`** - Start local development
+  - Scaffolds new project if `git_repo` is empty in config.yaml
   - Clones repository if `git_repo` is set
-  - Builds Docker images and starts all services
+  - Builds Docker images and starts all services (frontend, backend, postgres, redis)
   - Runs database migrations automatically
   - Waits for health checks before completing
+  - **Example**: `make dev SUBDIR=my-app` creates and starts a new project
 
-- **`make seed [SUBDIR=name]`** - Generates realistic test data
+- **`make seed [SUBDIR=name]`** - Generate test data
   - Reads Prisma schema to understand models
-  - Creates 30 users with 5-10 tasks each (configurable)
+  - Creates 30 users with 5-10 tasks each (configurable in config.yaml)
   - Uses Faker.js for realistic data
-  - Idempotent (safe to run multiple times)
+  - Idempotent (safe to run multiple times - won't create duplicate users)
+  - **Note**: Only needed for apps with database tables. Hello world apps skip seeding automatically.
 
-- **`make config [SUBDIR=name]`** - Interactive configuration wizard
-  - Prompts for project name, GCP project ID, region
-  - Generates complete `config.yaml` with defaults
-  - Won't overwrite existing config without permission
-
-- **`make deploy [SUBDIR=name]`** - Deploys to GKE
+- **`make deploy [SUBDIR=name]`** - Deploy to production
+  - Prompts for GCP project ID if not configured
   - Provisions GKE cluster (or reuses existing)
   - Builds production Docker images
   - Deploys all services to Kubernetes
-  - Creates LoadBalancer for frontend
-  - Automatically commits and pushes code to GitHub
-  - Runs seed script automatically
+  - Creates LoadBalancer for frontend (public IP)
+  - Automatically creates/connects GitHub repository
+  - Runs seed script automatically (if tables exist)
+  - **Example**: `make deploy SUBDIR=my-app` deploys your app to GKE
+
+**Other Commands:**
+- `make config [SUBDIR=name]` - Interactive config.yaml generator (optional - `make deploy` will prompt if needed)
+- `make help` - Display all available commands
 
 <!-- DISABLED: make destroy - Currently disabled for safety
 - **`make destroy [SUBDIR=name]`** - Cleanup all resources

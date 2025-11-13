@@ -76,6 +76,9 @@ seed: ## Generate fake data from Prisma schema
 			echo "⚠️  Prisma client not found, generating..." && \
 			npx prisma generate; \
 		fi && \
+		echo "🔄 Running database migrations..." && \
+		export DATABASE_URL="$${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/appdb}" && \
+		npx prisma migrate deploy 2>/dev/null || npx prisma migrate dev --name seed_prep 2>/dev/null || echo "⚠️  Could not run migrations (database may not be running)"; \
 		cd .. && \
 		export DATABASE_URL="$${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/appdb}" && \
 		export NODE_PATH="$$(pwd)/backend/node_modules:$$NODE_PATH" && \
@@ -102,6 +105,9 @@ seed: ## Generate fake data from Prisma schema
 			echo "⚠️  Prisma client not found, generating..." && \
 			npx prisma generate; \
 		fi && \
+		echo "🔄 Running database migrations..." && \
+		export DATABASE_URL="$${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/appdb}" && \
+		npx prisma migrate deploy 2>/dev/null || npx prisma migrate dev --name seed_prep 2>/dev/null || echo "⚠️  Could not run migrations (database may not be running)"; \
 		cd .. && \
 		export DATABASE_URL="$${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/appdb}" && \
 		export NODE_PATH="$$(pwd)/backend/node_modules:$$NODE_PATH" && \
