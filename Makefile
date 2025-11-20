@@ -74,15 +74,15 @@ seed: ## Generate fake data from Prisma schema
 		fi && \
 		if [ ! -d "node_modules/@prisma/client" ]; then \
 			echo "⚠️  Prisma client not found, generating..." && \
-			npx prisma generate; \
+			./node_modules/.bin/prisma generate || npx --yes -p prisma@6.19.0 prisma generate; \
 		fi && \
 		echo "🔄 Running database migrations..." && \
 		export DATABASE_URL="$${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/appdb}" && \
-		npx prisma migrate deploy 2>/dev/null || npx prisma migrate dev --name seed_prep 2>/dev/null || echo "⚠️  Could not run migrations (database may not be running)"; \
-		cd .. && \
+		./node_modules/.bin/prisma migrate deploy 2>/dev/null || ./node_modules/.bin/prisma migrate dev --name seed_prep 2>/dev/null || npx --yes -p prisma@6.19.0 prisma migrate deploy 2>/dev/null || npx --yes -p prisma@6.19.0 prisma migrate dev --name seed_prep 2>/dev/null || echo "⚠️  Could not run migrations (database may not be running)"; \
 		export DATABASE_URL="$${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/appdb}" && \
-		export NODE_PATH="$$(pwd)/backend/node_modules:$$NODE_PATH" && \
-		npx tsx ../scripts/seed-database.ts "$(PWD)/$(SUBDIR)"; \
+		PROJECT_ROOT="$$(cd .. && pwd)" && \
+		export NODE_PATH="$$(pwd)/node_modules:$${NODE_PATH:-}" && \
+		./node_modules/.bin/tsx "$$PROJECT_ROOT/../scripts/seed-database.ts" "$$PROJECT_ROOT" || npx --yes -p tsx@4.7.0 tsx "$$PROJECT_ROOT/../scripts/seed-database.ts" "$$PROJECT_ROOT"; \
 	else \
 		if [ ! -f "config.yaml" ]; then \
 			echo "❌ Error: config.yaml not found. Please create it from config.yaml.example"; \
@@ -103,15 +103,15 @@ seed: ## Generate fake data from Prisma schema
 		fi && \
 		if [ ! -d "node_modules/@prisma/client" ]; then \
 			echo "⚠️  Prisma client not found, generating..." && \
-			npx prisma generate; \
+			./node_modules/.bin/prisma generate || npx --yes -p prisma@6.19.0 prisma generate; \
 		fi && \
 		echo "🔄 Running database migrations..." && \
 		export DATABASE_URL="$${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/appdb}" && \
-		npx prisma migrate deploy 2>/dev/null || npx prisma migrate dev --name seed_prep 2>/dev/null || echo "⚠️  Could not run migrations (database may not be running)"; \
-		cd .. && \
+		./node_modules/.bin/prisma migrate deploy 2>/dev/null || ./node_modules/.bin/prisma migrate dev --name seed_prep 2>/dev/null || npx --yes -p prisma@6.19.0 prisma migrate deploy 2>/dev/null || npx --yes -p prisma@6.19.0 prisma migrate dev --name seed_prep 2>/dev/null || echo "⚠️  Could not run migrations (database may not be running)"; \
 		export DATABASE_URL="$${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/appdb}" && \
-		export NODE_PATH="$$(pwd)/backend/node_modules:$$NODE_PATH" && \
-		npx tsx scripts/seed-database.ts "$(PWD)"; \
+		PROJECT_ROOT="$$(cd .. && pwd)" && \
+		export NODE_PATH="$$(pwd)/node_modules:$${NODE_PATH:-}" && \
+		./node_modules/.bin/tsx "$$PROJECT_ROOT/scripts/seed-database.ts" "$$PROJECT_ROOT" || npx --yes -p tsx@4.7.0 tsx "$$PROJECT_ROOT/scripts/seed-database.ts" "$$PROJECT_ROOT"; \
 	fi
 
 # ────────────────────────────────────────────────────────────────────────────────

@@ -11,7 +11,7 @@
 import { readFileSync, existsSync } from 'fs'
 import { join, dirname, resolve } from 'path'
 import { fileURLToPath } from 'url'
-import { parse } from 'yaml'
+import { createRequire } from 'module'
 import { faker } from '@faker-js/faker'
 import { PrismaClient } from '@prisma/client'
 
@@ -42,6 +42,37 @@ const projectRoot = process.argv[2] || findProjectRoot()
 const configPath = join(projectRoot, 'config.yaml')
 const backendPath = join(projectRoot, 'backend')
 const defaultSchemaPath = join(backendPath, 'prisma', 'schema.prisma')
+
+// Dynamically resolve yaml module from backend's node_modules
+// This allows the script to find yaml even when run from different directories
+function loadYamlParser(): (content: string) => any {
+  // Try to use yaml from backend's node_modules first
+  const backendPackageJson = join(backendPath, 'package.json')
+  if (existsSync(backendPackageJson)) {
+    try {
+      const require = createRequire(backendPackageJson)
+      const yamlModule = require('yaml')
+      return yamlModule.parse
+    } catch (error) {
+      // If that fails, try from script's location
+    }
+  }
+  
+  // Fallback: try to require from script's location
+  try {
+    const require = createRequire(import.meta.url)
+    const yamlModule = require('yaml')
+    return yamlModule.parse
+  } catch (error) {
+    console.error(`❌ Failed to load yaml module`)
+    console.error(`   Error: ${error}`)
+    console.error(`   Please ensure yaml is installed in backend/node_modules`)
+    console.error(`   Run: cd ${backendPath} && npm install`)
+    process.exit(1)
+  }
+}
+
+const parse = loadYamlParser()
 
 // Read config.yaml
 let config: any = {}
